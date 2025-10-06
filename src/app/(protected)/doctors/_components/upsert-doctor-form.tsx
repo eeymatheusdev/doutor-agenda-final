@@ -1,13 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon, XIcon } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { NumericFormat } from "react-number-format";
+import { NumericFormat, PatternFormat } from "react-number-format";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { upsertDoctor } from "@/actions/upsert-doctor";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   DialogContent,
   DialogDescription,
@@ -25,6 +29,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -34,16 +43,70 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { doctorsTable } from "@/db/schema";
+import { cn } from "@/lib/utils";
 
-import { medicalSpecialties } from "../_constants";
+import {
+  BrazilianState,
+  brazilianStates,
+  dentalSpecialties,
+  DentalSpecialty,
+} from "../_constants";
+
+// Array de todas as chaves de estado para o Zod enum
+const allBrazilianStates = Object.keys(BrazilianState) as [
+  keyof typeof BrazilianState,
+  ...(keyof typeof BrazilianState)[],
+];
+
+// Array de todos os valores de especialidades para o Zod array de enums
+const allDentalSpecialties = Object.values(DentalSpecialty) as [
+  DentalSpecialty,
+  ...DentalSpecialty[],
+];
 
 const formSchema = z
   .object({
     name: z.string().trim().min(1, {
       message: "Nome é obrigatório.",
     }),
-    specialty: z.string().trim().min(1, {
-      message: "Especialidade é obrigatória.",
+    cro: z.string().trim().min(1, {
+      message: "CRO é obrigatório.",
+    }),
+    email: z.string().email({
+      message: "E-mail inválido.",
+    }),
+    dateOfBirth: z.date({
+      required_error: "Data de nascimento é obrigatória.",
+    }),
+    rg: z.string().trim().min(1, {
+      message: "RG é obrigatório.",
+    }),
+    cpf: z.string().trim().min(1, {
+      message: "CPF é obrigatório.",
+    }),
+    street: z.string().trim().min(1, {
+      message: "Rua é obrigatória.",
+    }),
+    number: z.string().trim().min(1, {
+      message: "Número é obrigatório.",
+    }),
+    neighborhood: z.string().trim().min(1, {
+      message: "Bairro é obrigatório.",
+    }),
+    zipCode: z.string().trim().min(1, {
+      message: "CEP é obrigatório.",
+    }),
+    complement: z.string().optional().nullable(),
+    city: z.string().trim().min(1, {
+      message: "Cidade é obrigatória.",
+    }),
+    state: z.enum(allBrazilianStates, {
+      required_error: "Estado é obrigatório.",
+    }),
+    observations: z.string().optional().nullable(),
+    education: z.string().optional().nullable(),
+    specialties: z.array(z.enum(allDentalSpecialties)).min(1, {
+      message: "Selecione pelo menos uma especialidade.",
     }),
     appointmentPrice: z.number().min(1, {
       message: "Preço da consulta é obrigatório.",
@@ -68,71 +131,119 @@ const formSchema = z
     },
   );
 
+// Novo tipo para o objeto doctor de entrada, pois specialties agora é um array
+interface DoctorWithArraySpecialties
+  extends Omit<typeof doctorsTable.$inferSelect, "specialties"> {
+  specialties: DentalSpecialty[] | null;
+}
+
 interface UpsertDoctorFormProps {
   isOpen: boolean;
-  doctor?: typeof doctorsTable.$inferSelect;
+  doctor?: DoctorWithArraySpecialties;
   onSuccess?: () => void;
 }
+
+// Helper para converter string de data ou null/undefined para Date | undefined
+const parseDate = (dateString: string | null | undefined) =>
+  dateString ? new Date(dateString) : undefined;
 
 const UpsertDoctorForm = ({
   doctor,
   onSuccess,
   isOpen,
 }: UpsertDoctorFormProps) => {
+  // Define valores padrão com coerção de tipos
+  const defaultValues = {
+    name: doctor?.name ?? "",
+    cro: doctor?.cro ?? "",
+    email: doctor?.email ?? "",
+    dateOfBirth: parseDate(doctor?.dateOfBirth),
+    rg: doctor?.rg ?? "",
+    cpf: doctor?.cpf ?? "",
+    street: doctor?.street ?? "",
+    number: doctor?.number ?? "",
+    neighborhood: doctor?.neighborhood ?? "",
+    zipCode: doctor?.zipCode ?? "",
+    complement: doctor?.complement ?? "",
+    city: doctor?.city ?? "",
+    state:
+      (doctor?.state as keyof typeof BrazilianState) ??
+      brazilianStates[0].value, // Define um estado padrão
+    observations: doctor?.observations ?? "",
+    education: doctor?.education ?? "",
+    specialties: doctor?.specialties ?? [],
+    appointmentPrice: doctor?.appointmentPriceInCents
+      ? doctor.appointmentPriceInCents / 100
+      : 0,
+    availableFromWeekDay: doctor?.availableFromWeekDay?.toString() ?? "1",
+    availableToWeekDay: doctor?.availableToWeekDay?.toString() ?? "5",
+    availableFromTime: doctor?.availableFromTime ?? "",
+    availableToTime: doctor?.availableToTime ?? "",
+  };
+
   const form = useForm<z.infer<typeof formSchema>>({
     shouldUnregister: true,
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: doctor?.name ?? "",
-      specialty: doctor?.specialty ?? "",
-      appointmentPrice: doctor?.appointmentPriceInCents
-        ? doctor.appointmentPriceInCents / 100
-        : 0,
-      availableFromWeekDay: doctor?.availableFromWeekDay?.toString() ?? "1",
-      availableToWeekDay: doctor?.availableToWeekDay?.toString() ?? "5",
-      availableFromTime: doctor?.availableFromTime ?? "",
-      availableToTime: doctor?.availableToTime ?? "",
-    },
+    defaultValues: defaultValues,
   });
 
   useEffect(() => {
     if (isOpen) {
-      form.reset({
-        name: doctor?.name ?? "",
-        specialty: doctor?.specialty ?? "",
-        appointmentPrice: doctor?.appointmentPriceInCents
-          ? doctor.appointmentPriceInCents / 100
-          : 0,
-        availableFromWeekDay: doctor?.availableFromWeekDay?.toString() ?? "1",
-        availableToWeekDay: doctor?.availableToWeekDay?.toString() ?? "5",
-        availableFromTime: doctor?.availableFromTime ?? "",
-        availableToTime: doctor?.availableToTime ?? "",
-      });
+      form.reset(defaultValues);
     }
   }, [isOpen, form, doctor]);
 
   const upsertDoctorAction = useAction(upsertDoctor, {
     onSuccess: () => {
-      toast.success("Médico adicionado com sucesso.");
+      toast.success("Médico salvo com sucesso.");
       onSuccess?.();
     },
     onError: () => {
-      toast.error("Erro ao adicionar médico.");
+      toast.error("Erro ao salvar médico.");
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Helper para converter string vazia para null (somente para campos opcionais)
+    const nullableString = (value: string | null | undefined) =>
+      value === "" ? null : value;
+
     upsertDoctorAction.execute({
       ...values,
       id: doctor?.id,
       availableFromWeekDay: parseInt(values.availableFromWeekDay),
       availableToWeekDay: parseInt(values.availableToWeekDay),
       appointmentPriceInCents: values.appointmentPrice * 100,
+      // Apenas campos opcionais precisam de conversão
+      complement: nullableString(values.complement),
+      observations: nullableString(values.observations),
+      education: nullableString(values.education),
     });
   };
 
+  const selectedSpecialties = form.watch("specialties");
+
+  // Função para gerenciar a seleção múltipla
+  const handleSpecialtyChange = (value: string) => {
+    const specialties = form.getValues("specialties");
+
+    if (specialties.includes(value)) {
+      form.setValue(
+        "specialties",
+        specialties.filter((s) => s !== value) as DentalSpecialty[],
+        { shouldValidate: true },
+      );
+    } else {
+      form.setValue(
+        "specialties",
+        [...specialties, value] as DentalSpecialty[],
+        { shouldValidate: true },
+      );
+    }
+  };
+
   return (
-    <DialogContent>
+    <DialogContent className="sm:max-w-[500px]">
       <DialogHeader>
         <DialogTitle>{doctor ? doctor.name : "Adicionar médico"}</DialogTitle>
         <DialogDescription>
@@ -143,6 +254,7 @@ const UpsertDoctorForm = ({
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Informações Pessoais (Nome, CRO, Email, Data de Nascimento, RG, CPF) */}
           <FormField
             control={form.control}
             name="name"
@@ -156,33 +268,340 @@ const UpsertDoctorForm = ({
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
-            name="specialty"
+            name="cro"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Especialidade</FormLabel>
+                <FormLabel>CRO/CRM</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: 12345/SP" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>E-mail</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="exemplo@email.com"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="dateOfBirth"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Data de nascimento</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: ptBR })
+                        ) : (
+                          <span>Selecione a data</span>
+                        )}
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      captionLayout="dropdown-buttons"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      fromYear={1950}
+                      toYear={new Date().getFullYear()}
+                      initialFocus
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="rg"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>RG</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="cpf"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>CPF</FormLabel>
+                <FormControl>
+                  <PatternFormat
+                    format="###.###.###-##"
+                    mask="_"
+                    value={field.value}
+                    onValueChange={(value) => {
+                      field.onChange(value.value);
+                    }}
+                    customInput={Input}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Endereço */}
+          <div className="space-y-4 rounded-md border p-4">
+            <h4 className="font-semibold">Endereço</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="zipCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CEP</FormLabel>
+                    <FormControl>
+                      <PatternFormat
+                        format="#####-###"
+                        mask="_"
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value.value);
+                        }}
+                        customInput={Input}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="street"
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel>Rua/Avenida</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="complement"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Complemento (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="neighborhood"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bairro</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cidade</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value)}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecione o Estado" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {brazilianStates.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Múltiplas Especializações */}
+          <FormField
+            control={form.control}
+            name="specialties"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Especialidades</FormLabel>
                 <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  // O valor do Select é irrelevante, usamos o onValueChange para gerenciar o array
+                  onValueChange={handleSpecialtyChange}
+                  value={
+                    selectedSpecialties.length > 0 ? selectedSpecialties[0] : ""
+                  }
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione uma especialidade" />
+                      <SelectValue placeholder="Selecione as especialidades" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {medicalSpecialties.map((specialty) => (
-                      <SelectItem key={specialty.value} value={specialty.value}>
+                    {dentalSpecialties.map((specialty) => (
+                      <SelectItem
+                        key={specialty.value}
+                        value={specialty.value}
+                        // Marcar como selecionado visualmente
+                        data-state={
+                          selectedSpecialties.includes(specialty.value)
+                            ? "checked"
+                            : "unchecked"
+                        }
+                        // Prevenir fechamento do Popover ao selecionar
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          handleSpecialtyChange(specialty.value);
+                        }}
+                      >
                         {specialty.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {/* Visualização de tags para seleção múltipla */}
+                {selectedSpecialties.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {selectedSpecialties.map((specialty) => (
+                      <Button
+                        key={specialty}
+                        variant="secondary"
+                        size="sm"
+                        type="button"
+                        onClick={() => handleSpecialtyChange(specialty)}
+                        className="h-7"
+                      >
+                        {specialty}
+                        <XIcon className="ml-1 size-3" />
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}
           />
+          {/* FIM Múltiplas Especializações */}
+
+          {/* Formações e Observações (Opcional) */}
+          <FormField
+            control={form.control}
+            name="education"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Formações (Opcional)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Ex: Mestrado em Implantodontia"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="observations"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Observações (Opcional)</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Disponibilidade e Preço (existente) */}
           <FormField
             control={form.control}
             name="appointmentPrice"

@@ -4,6 +4,7 @@ import {
   CalendarIcon,
   ClockIcon,
   DollarSignIcon,
+  Mail,
   TrashIcon,
 } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
@@ -39,8 +40,13 @@ import { formatCurrencyInCents } from "@/helpers/currency";
 import { getAvailability } from "../_helpers/availability";
 import UpsertDoctorForm from "./upsert-doctor-form";
 
+// Novo tipo para o objeto doctor, já que specialties agora é um array
+interface Doctor extends Omit<typeof doctorsTable.$inferSelect, "specialties"> {
+  specialties: string[];
+}
+
 interface DoctorCardProps {
-  doctor: typeof doctorsTable.$inferSelect;
+  doctor: Doctor;
 }
 
 const DoctorCard = ({ doctor }: DoctorCardProps) => {
@@ -64,6 +70,8 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
     .map((name) => name[0])
     .join("");
   const availability = getAvailability(doctor);
+  // Exibe múltiplas especialidades unidas por vírgula
+  const specialtiesText = doctor.specialties.join(", ");
 
   return (
     <Card>
@@ -74,7 +82,15 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
           </Avatar>
           <div>
             <h3 className="text-sm font-medium">{doctor.name}</h3>
-            <p className="text-muted-foreground text-sm">{doctor.specialty}</p>
+            {/* Displaying multiple specialties */}
+            <p className="text-muted-foreground text-sm">{specialtiesText}</p>
+            <p className="text-muted-foreground text-sm">
+              CRO/CRM: {doctor.cro}
+            </p>
+            <p className="text-muted-foreground flex items-center gap-1 text-sm">
+              <Mail className="size-3" />
+              {doctor.email}
+            </p>
           </div>
         </div>
       </CardHeader>
@@ -106,6 +122,9 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
           <UpsertDoctorForm
             doctor={{
               ...doctor,
+              dateOfBirth: doctor.dateOfBirth
+                ? doctor.dateOfBirth.toString()
+                : null,
               availableFromTime: availability.from.format("HH:mm:ss"),
               availableToTime: availability.to.format("HH:mm:ss"),
             }}

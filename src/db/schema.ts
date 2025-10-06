@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  date,
   integer,
   pgEnum,
   pgTable,
@@ -110,6 +111,81 @@ export const clinicsTableRelations = relations(clinicsTable, ({ many }) => ({
   usersToClinics: many(usersToClinicsTable),
 }));
 
+// NOVO: Enum para Status de Agendamento
+export const appointmentStatusEnum = pgEnum("appointment_status", [
+  "cancelada",
+  "remarcada",
+  "agendada",
+  "atendida",
+  "nao_atendida",
+]);
+
+// NOVO: Enum para Procedimentos Odontológicos
+export const dentalProcedureEnum = pgEnum("dental_procedure", [
+  "Avaliação Inicial",
+  "Limpeza (Profilaxia)",
+  "Restauração",
+  "Extração",
+  "Tratamento de Canal (Endodontia)",
+  "Clareamento Dental",
+  "Implante Dentário",
+  "Consulta de Retorno",
+]);
+
+export const brazilianStateEnum = pgEnum("brazilian_state", [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+]);
+
+export const dentalSpecialtyEnum = pgEnum("dental_specialty", [
+  "Acupuntura",
+  "Dentística",
+  "Disfunção Temporomandibular e Dor Orofacial",
+  "Endodontia",
+  "Estomatologia",
+  "Implantodontia",
+  "Odontologia Legal",
+  "Odontologia do Esporte",
+  "Odontologia do Trabalho",
+  "Odontologia para Pacientes com Necessidades Especiais",
+  "Odontogeriatria",
+  "Odontopediatria",
+  "Ortodontia",
+  "Patologia Oral e Maxilofacial",
+  "Periodontia",
+  "Prótese Dentária",
+  "Prótese Bucomaxilofacial",
+  "Radiologia Odontológica e Imaginologia",
+  "Saúde Coletiva",
+  "Cirurgia e Traumatologia Bucomaxilofaciais",
+  "Ortopedia Funcional dos Maxilares",
+]);
+
 export const doctorsTable = pgTable("doctors", {
   id: uuid("id").defaultRandom().primaryKey(),
   clinicId: uuid("clinic_id")
@@ -122,12 +198,27 @@ export const doctorsTable = pgTable("doctors", {
   availableToWeekDay: integer("available_to_week_day").notNull(),
   availableFromTime: time("available_from_time").notNull(),
   availableToTime: time("available_to_time").notNull(),
-  specialty: text("specialty").notNull(),
+  specialties: dentalSpecialtyEnum("specialties").array().notNull(),
   appointmentPriceInCents: integer("appointment_price_in_cents").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date()),
+
+  cro: text("cro").notNull(),
+  email: text("email").notNull().unique(),
+  dateOfBirth: date("date_of_birth").notNull(), // Data de nascimento (opcional)
+  rg: text("rg").notNull(), // RG (opcional)
+  cpf: text("cpf").notNull(), // CPF (opcional)
+  street: text("street").notNull(),
+  number: text("number").notNull(),
+  neighborhood: text("neighborhood").notNull(),
+  zipCode: text("zip_code").notNull(),
+  complement: text("complement"),
+  city: text("city").notNull(),
+  state: brazilianStateEnum("state").notNull(),
+  observations: text("observations"), // Observações (opcional)
+  education: text("education"), // Formações (opcional)
 });
 
 export const doctorsTableRelations = relations(
@@ -156,6 +247,23 @@ export const patientsTable = pgTable("patients", {
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date()),
+  cpf: text("cpf").notNull(),
+  rg: text("rg").notNull(),
+  dateOfBirth: date("date_of_birth").notNull(),
+  // NOVOS CAMPOS DE ENDEREÇO (OBRIGATÓRIOS)
+  street: text("street").notNull(),
+  number: text("number").notNull(),
+  neighborhood: text("neighborhood").notNull(),
+  zipCode: text("zip_code").notNull(),
+  complement: text("complement"), // Opcional
+  city: text("city").notNull(),
+  state: brazilianStateEnum("state").notNull(),
+
+  // NOVOS CAMPOS DO RESPONSÁVEL (OPCIONAIS)
+  responsibleName: text("responsible_name"),
+  responsibleCpf: text("responsible_cpf"),
+  responsibleRg: text("responsible_rg"),
+  responsiblePhoneNumber: text("responsible_phone_number"),
 });
 
 export const patientsTableRelations = relations(
@@ -186,6 +294,8 @@ export const appointmentsTable = pgTable("appointments", {
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date()),
+  status: appointmentStatusEnum("status").notNull(),
+  procedure: dentalProcedureEnum("procedure").notNull(),
 });
 
 export const appointmentsTableRelations = relations(

@@ -70,7 +70,8 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         id: doctorsTable.id,
         name: doctorsTable.name,
         avatarImageUrl: doctorsTable.avatarImageUrl,
-        specialty: doctorsTable.specialty,
+        // Usando o primeiro elemento do array como 'specialty'
+        specialty: sql<string>`${doctorsTable.specialties}[1]`.as("specialty"),
         appointments: count(appointmentsTable.id),
       })
       .from(doctorsTable)
@@ -83,12 +84,15 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         ),
       )
       .where(eq(doctorsTable.clinicId, session.user.clinic.id))
-      .groupBy(doctorsTable.id)
+      .groupBy(doctorsTable.id, sql`${doctorsTable.specialties}[1]`)
       .orderBy(desc(count(appointmentsTable.id)))
       .limit(10),
     db
       .select({
-        specialty: doctorsTable.specialty,
+        // UNNEST transforma o array de specialties em múltiplas linhas
+        specialty: sql<string>`unnest(${doctorsTable.specialties})`.as(
+          "specialty",
+        ),
         appointments: count(appointmentsTable.id),
       })
       .from(appointmentsTable)
@@ -100,17 +104,17 @@ export const getDashboard = async ({ from, to, session }: Params) => {
           lte(appointmentsTable.date, new Date(to)),
         ),
       )
-      .groupBy(doctorsTable.specialty)
+      .groupBy(sql`unnest(${doctorsTable.specialties})`)
       .orderBy(desc(count(appointmentsTable.id))),
     db.query.appointmentsTable.findMany({
       where: and(
         eq(appointmentsTable.clinicId, session.user.clinic.id),
-        gte(appointmentsTable.date, new Date()),
-        lte(appointmentsTable.date, new Date()),
+        gte(appointmentsTable.date, dayjs().startOf("day").toDate()),
+        lte(appointmentsTable.date, dayjs().endOf("day").toDate()),
       ),
       with: {
         patient: true,
-        doctor: true,
+        doctor: true, // Retorna o objeto doctor completo, incluindo 'specialties' (array)
       },
     }),
     db
@@ -133,14 +137,24 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .groupBy(sql`DATE(${appointmentsTable.date})`)
       .orderBy(sql`DATE(${appointmentsTable.date})`),
   ]);
+
+  const adaptedTodayAppointments = todayAppointments.map((a) => ({
+    ...a,
+    doctor: {
+      ...a.doctor,
+      // Mapeia o campo `specialty` para a primeira especialidade do array para compatibilidade com a coluna da tabela
+      specialty: a.doctor.specialties[0] ?? "Sem especialidade",
+    },
+  }));
+
   return {
     totalRevenue,
     totalAppointments,
     totalPatients,
     totalDoctors,
-    topDoctors,
-    topSpecialties,
-    todayAppointments,
+    topDoctors: topDoctors as any, // Mantendo a tipagem flexível para o resultado da consulta SQL
+    topSpecialties: topSpecialties as any, // Mantendo a tipagem flexível para o resultado da consulta SQL
+    todayAppointments: adaptedTodayAppointments,
     dailyAppointmentsData,
   };
 };

@@ -1,6 +1,8 @@
 "use client";
 
-import { Mail, Phone, User } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarDays, Mail, Phone, User } from "lucide-react";
 import { useState } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -32,18 +34,31 @@ const PatientCard = ({ patient }: PatientCardProps) => {
     .join("");
 
   const formatPhoneNumber = (phone: string) => {
-    // Remove all non-numeric characters
     const cleaned = phone.replace(/\D/g, "");
-    // Format as (XX) XXXXX-XXXX
     if (cleaned.length === 11) {
       return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
     }
     return phone;
   };
 
+  const formatCpf = (cpf: string) => {
+    const cleaned = cpf.replace(/\D/g, "");
+    if (cleaned.length === 11) {
+      return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9)}`;
+    }
+    return cpf;
+  };
+
   const getSexLabel = (sex: "male" | "female") => {
     return sex === "male" ? "Masculino" : "Feminino";
   };
+
+  // O Drizzle retorna a data como string, mas precisamos do formato dd/MM/yyyy para exibição no card
+  const formattedDateOfBirth = format(
+    new Date(patient.dateOfBirth),
+    "dd/MM/yyyy",
+    { locale: ptBR },
+  );
 
   return (
     <Card>
@@ -55,7 +70,7 @@ const PatientCard = ({ patient }: PatientCardProps) => {
           <div>
             <h3 className="text-sm font-medium">{patient.name}</h3>
             <p className="text-muted-foreground text-sm">
-              {getSexLabel(patient.sex)}
+              CPF: {formatCpf(patient.cpf)}
             </p>
           </div>
         </div>
@@ -69,6 +84,10 @@ const PatientCard = ({ patient }: PatientCardProps) => {
         <Badge variant="outline">
           <Phone className="mr-1 h-3 w-3" />
           {formatPhoneNumber(patient.phoneNumber)}
+        </Badge>
+        <Badge variant="outline">
+          <CalendarDays className="mr-1 h-3 w-3" />
+          Nascimento: {formattedDateOfBirth}
         </Badge>
         <Badge variant="outline">
           <User className="mr-1 h-3 w-3" />
@@ -85,7 +104,11 @@ const PatientCard = ({ patient }: PatientCardProps) => {
             <Button className="w-full">Ver detalhes</Button>
           </DialogTrigger>
           <UpsertPatientForm
-            patient={patient}
+            // Passamos o patient.dateOfBirth como string para ser parseado no formulário
+            patient={{
+              ...patient,
+              dateOfBirth: patient.dateOfBirth.toString(),
+            }}
             onSuccess={() => setIsUpsertPatientDialogOpen(false)}
             isOpen={isUpsertPatientDialogOpen}
           />

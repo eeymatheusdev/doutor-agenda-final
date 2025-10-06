@@ -1,5 +1,7 @@
+// src/actions/upsert-patient/index.ts - Conteúdo inalterado
 "use server";
 
+import dayjs from "dayjs";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
@@ -23,18 +25,24 @@ export const upsertPatient = actionClient
       throw new Error("Clinic not found");
     }
 
+    const formattedDateOfBirth = parsedInput.dateOfBirth
+      ? dayjs(parsedInput.dateOfBirth).format("YYYY-MM-DD")
+      : "";
+
     await db
       .insert(patientsTable)
       .values({
         ...parsedInput,
-        id: parsedInput.id,
-        clinicId: session?.user.clinic?.id,
+        dateOfBirth: formattedDateOfBirth,
+        clinicId: session.user.clinic.id,
       })
       .onConflictDoUpdate({
         target: [patientsTable.id],
         set: {
           ...parsedInput,
+          dateOfBirth: formattedDateOfBirth,
         },
       });
+
     revalidatePath("/patients");
   });

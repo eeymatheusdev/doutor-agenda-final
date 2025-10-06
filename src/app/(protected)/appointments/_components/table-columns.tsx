@@ -1,5 +1,3 @@
-"use client";
-
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -19,6 +17,7 @@ type AppointmentWithRelations = typeof appointmentsTable.$inferSelect & {
   doctor: {
     id: string;
     name: string;
+    // O campo 'specialty' está aqui para compatibilidade de exibição
     specialty: string;
   };
 };
@@ -50,9 +49,19 @@ export const appointmentsTableColumns: ColumnDef<AppointmentWithRelations>[] = [
     },
   },
   {
-    id: "specialty",
-    accessorKey: "doctor.specialty",
-    header: "Especialidade",
+    id: "procedure", // NOVO CAMPO OBRIGATÓRIO
+    accessorKey: "procedure",
+    header: "Procedimento",
+  },
+  {
+    id: "status", // NOVO CAMPO OBRIGATÓRIO
+    accessorKey: "status",
+    header: "Status",
+    cell: (params) => {
+      const status = params.row.original.status;
+      // Capitalizando a primeira letra e substituindo '_' por espaço
+      return status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
+    },
   },
   {
     id: "price",

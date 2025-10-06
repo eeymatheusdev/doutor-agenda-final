@@ -1,5 +1,3 @@
-"use client";
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -48,6 +46,29 @@ import {
 import { doctorsTable, patientsTable } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
+// Definição dos enums localmente para o formulário
+const appointmentStatus = [
+  "cancelada",
+  "remarcada",
+  "agendada",
+  "atendida",
+  "nao_atendida",
+] as const;
+
+const dentalProcedure = [
+  "Avaliação Inicial",
+  "Limpeza (Profilaxia)",
+  "Restauração",
+  "Extração",
+  "Tratamento de Canal (Endodontia)",
+  "Clareamento Dental",
+  "Implante Dentário",
+  "Consulta de Retorno",
+] as const;
+
+type AppointmentStatus = (typeof appointmentStatus)[number];
+type DentalProcedure = (typeof dentalProcedure)[number];
+
 const formSchema = z.object({
   patientId: z.string().min(1, {
     message: "Paciente é obrigatório.",
@@ -64,12 +85,18 @@ const formSchema = z.object({
   time: z.string().min(1, {
     message: "Horário é obrigatório.",
   }),
+  // ATUALIZADO: AMBOS SÃO OBRIGATÓRIOS
+  procedure: z.enum(dentalProcedure),
+  status: z.enum(appointmentStatus),
 });
 
 interface AddAppointmentFormProps {
   isOpen: boolean;
   patients: (typeof patientsTable.$inferSelect)[];
-  doctors: (typeof doctorsTable.$inferSelect)[];
+  // Ajustando o tipo do doctor para specialties (array)
+  doctors: (Omit<typeof doctorsTable.$inferSelect, "specialties"> & {
+    specialties: string[];
+  })[];
   onSuccess?: () => void;
 }
 
@@ -88,6 +115,8 @@ const AddAppointmentForm = ({
       appointmentPrice: 0,
       date: undefined,
       time: "",
+      procedure: undefined as unknown as DentalProcedure,
+      status: "agendada" as AppointmentStatus,
     },
   });
 
@@ -128,6 +157,8 @@ const AddAppointmentForm = ({
         appointmentPrice: 0,
         date: undefined,
         time: "",
+        procedure: undefined,
+        status: "agendada" as (typeof appointmentStatus)[number],
       });
     }
   }, [isOpen, form]);
@@ -220,7 +251,69 @@ const AddAppointmentForm = ({
                   <SelectContent>
                     {doctors.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
-                        {doctor.name} - {doctor.specialty}
+                        {doctor.name} -{" "}
+                        {doctor.specialties[0] ?? "Sem especialidade"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* NOVO CAMPO: Procedimento (obrigatório) */}
+          <FormField
+            control={form.control}
+            name="procedure"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Procedimento</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={!isDateTimeEnabled}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o procedimento" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {dentalProcedure.map((procedure) => (
+                      <SelectItem key={procedure} value={procedure}>
+                        {procedure}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* NOVO CAMPO: Status (obrigatório, com default no useForm) */}
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={!isDateTimeEnabled} // Desabilita edição de status se médico/paciente não estiverem selecionados
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {appointmentStatus.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status.charAt(0).toUpperCase() +
+                          status.slice(1).replace("_", " ")}
                       </SelectItem>
                     ))}
                   </SelectContent>

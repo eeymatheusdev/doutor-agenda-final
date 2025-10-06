@@ -40,12 +40,16 @@ export const upsertDoctor = actionClient
     if (!session?.user.clinic?.id) {
       throw new Error("Clinic not found");
     }
+    const formattedDateOfBirth = parsedInput.dateOfBirth
+      ? dayjs(parsedInput.dateOfBirth).format("YYYY-MM-DD")
+      : "";
+
     await db
       .insert(doctorsTable)
       .values({
         ...parsedInput,
-        id: parsedInput.id,
-        clinicId: session?.user.clinic?.id,
+        dateOfBirth: formattedDateOfBirth, // agora sempre string
+        clinicId: session.user.clinic.id,
         availableFromTime: availableFromTimeUTC.format("HH:mm:ss"),
         availableToTime: availableToTimeUTC.format("HH:mm:ss"),
       })
@@ -53,6 +57,7 @@ export const upsertDoctor = actionClient
         target: [doctorsTable.id],
         set: {
           ...parsedInput,
+          dateOfBirth: formattedDateOfBirth,
           availableFromTime: availableFromTimeUTC.format("HH:mm:ss"),
           availableToTime: availableToTimeUTC.format("HH:mm:ss"),
         },
