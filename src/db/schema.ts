@@ -111,6 +111,28 @@ export const clinicsTableRelations = relations(clinicsTable, ({ many }) => ({
   usersToClinics: many(usersToClinicsTable),
 }));
 
+// NOVO: Enum para Faces do Dente
+export const toothFaceEnum = pgEnum("tooth_face", [
+  "vestibular",
+  "lingual",
+  "mesial",
+  "distal",
+  "oclusal",
+  "incisal",
+]);
+
+// NOVO: Enum para Status/Marcações do Odontograma
+export const odontogramStatusEnum = pgEnum("odontogram_status", [
+  "carie",
+  "restauracao",
+  "canal",
+  "extracao",
+  "protese",
+  "implante",
+  "ausente",
+  "saudavel", // Adicionando um status padrão para representação
+]);
+
 // NOVO: Enum para Status de Agendamento
 export const appointmentStatusEnum = pgEnum("appointment_status", [
   "cancelada",
@@ -266,6 +288,66 @@ export const patientsTable = pgTable("patients", {
   responsiblePhoneNumber: text("responsible_phone_number"),
 });
 
+// NOVO: Tabela para Odontogramas (Representa uma versão/visita)
+export const odontogramsTable = pgTable("odontograms", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  patientId: uuid("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  clinicId: uuid("clinic_id") // Relacionar à clínica para segurança
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const odontogramsTableRelations = relations(
+  odontogramsTable,
+  ({ one, many }) => ({
+    patient: one(patientsTable, {
+      fields: [odontogramsTable.patientId],
+      references: [patientsTable.id],
+    }),
+    clinic: one(clinicsTable, {
+      fields: [odontogramsTable.clinicId],
+      references: [clinicsTable.id],
+    }),
+    marks: many(odontogramMarksTable),
+  }),
+);
+
+// NOVO: Tabela para as Marcações dos Dentes
+export const odontogramMarksTable = pgTable("odontogram_marks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  odontogramId: uuid("odontogram_id")
+    .notNull()
+    .references(() => odontogramsTable.id, { onDelete: "cascade" }),
+  // Número do dente (FDI) - Ex: '11', '48'
+  toothNumber: text("tooth_number").notNull(),
+  // Face do dente - Ex: 'oclusal', 'mesial'
+  face: toothFaceEnum("face").notNull(),
+  // Status/Marcação - Ex: 'carie', 'restauracao'
+  status: odontogramStatusEnum("status").notNull(),
+  // Observação opcional
+  observation: text("observation"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const odontogramMarksTableRelations = relations(
+  odontogramMarksTable,
+  ({ one }) => ({
+    odontogram: one(odontogramsTable, {
+      fields: [odontogramMarksTable.odontogramId],
+      references: [odontogramsTable.id],
+    }),
+  }),
+);
+
 export const patientsTableRelations = relations(
   patientsTable,
   ({ one, many }) => ({
@@ -274,6 +356,7 @@ export const patientsTableRelations = relations(
       references: [clinicsTable.id],
     }),
     appointments: many(appointmentsTable),
+    odontograms: many(odontogramsTable), // NOVA RELAÇÃO
   }),
 );
 

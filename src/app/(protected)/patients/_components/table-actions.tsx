@@ -1,4 +1,5 @@
-import { EditIcon, MoreVerticalIcon, TrashIcon } from "lucide-react";
+import { Component, EditIcon, MoreVerticalIcon, TrashIcon } from "lucide-react"; // Adicionando Component
+import Link from "next/link"; // Importando Link
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -66,6 +67,17 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
               <EditIcon />
               Editar
             </DropdownMenuItem>
+            {/* NOVO ITEM: Link para Odontograma */}
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/patients/${patient.id}/odontogram`}
+                className="gap-2"
+              >
+                <Component className="h-4 w-4" />
+                Odontograma
+              </Link>
+            </DropdownMenuItem>
+            {/* FIM NOVO ITEM */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
