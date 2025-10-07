@@ -134,7 +134,8 @@ export function OdontogramProvider({
   const isModalOpen = !!selectedTooth && !!selectedFace;
 
   // Query para buscar dados existentes
-  const { isLoading, refetch } = useQuery<
+  // ADICIONAR 'data' ao retorno e REMOVER 'onSuccess'
+  const { isLoading, data, refetch } = useQuery<
     OdontogramFetchData, // TQueryFnData
     Error, // TError
     OdontogramFetchData, // TData
@@ -147,17 +148,23 @@ export function OdontogramProvider({
       const data = await response.json();
       return data as OdontogramFetchData;
     },
-    onSuccess: (data) => {
+    staleTime: 5 * 60 * 1000, // 5 minutos de cache
+  });
+
+  // EFEITO COLATERAL: Lógica de inicialização baseada nos dados (substitui onSuccess)
+  React.useEffect(() => {
+    // Verifica se os dados foram carregados (data pode ser objeto ou null)
+    if (data !== undefined) {
       if (data) {
         setOdontogramId(data.id);
         setOdontogramState(marksToState(data.marks || []));
       } else {
-        // Inicializa com dentes saudáveis se não houver dados
+        // Inicializa com dentes saudáveis e sem ID se não houver dados
+        setOdontogramId(undefined);
         setOdontogramState(marksToState([]));
       }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos de cache
-  });
+    }
+  }, [data, setOdontogramId, setOdontogramState]);
 
   // Mutação para salvar dados no backend
   const { isPending: isSaving, mutate: saveMutate } = useMutation({
@@ -254,3 +261,5 @@ export function OdontogramProvider({
     </OdontogramContext.Provider>
   );
 }
+
+// ... (Restante do arquivo permanece inalterado)

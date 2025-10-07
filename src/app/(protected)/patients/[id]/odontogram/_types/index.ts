@@ -3,6 +3,10 @@ import { odontogramMarksTable, odontogramsTable } from "@/db/schema";
 
 import { OdontogramStatus, ToothFace, ToothNumber } from "../_constants";
 
+// CORREÇÃO: Re-exportar tipos base para que possam ser importados por outros módulos
+export type { OdontogramStatus, ToothFace, ToothNumber };
+// ---------------------------------------------------------------------------------
+
 export type Odontogram = typeof odontogramsTable.$inferSelect & {
   marks: OdontogramMarkDb[];
 };
