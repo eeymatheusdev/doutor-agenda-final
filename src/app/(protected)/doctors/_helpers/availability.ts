@@ -1,3 +1,4 @@
+// src/app/(protected)/doctors/_helpers/availability.ts
 import "dayjs/locale/pt-br";
 
 import dayjs from "dayjs";
@@ -8,7 +9,17 @@ import { doctorsTable } from "@/db/schema";
 dayjs.extend(utc);
 dayjs.locale("pt-br");
 
-export const getAvailability = (doctor: typeof doctorsTable.$inferSelect) => {
+// Define um tipo que inclui apenas os campos de disponibilidade necessários
+type DoctorAvailabilityFields = Pick<
+  typeof doctorsTable.$inferSelect,
+  | "availableFromTime"
+  | "availableToTime"
+  | "availableFromWeekDay"
+  | "availableToWeekDay"
+>;
+
+// O tipo de entrada agora é mais permissivo e compatível com a interface 'Doctor'
+export const getAvailability = (doctor: DoctorAvailabilityFields) => {
   const from = dayjs()
     .utc()
     .day(doctor.availableFromWeekDay)

@@ -426,7 +426,11 @@ const UpsertPatientForm = ({
                   <FormItem>
                     <FormLabel>Complemento (Opcional)</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input
+                        {...field}
+                        // CORREÇÃO: Converte null para string vazia
+                        value={field.value ?? ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -500,7 +504,11 @@ const UpsertPatientForm = ({
                 <FormItem>
                   <FormLabel>Nome do responsável</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input
+                      {...field}
+                      // CORREÇÃO: Converte null para string vazia
+                      value={field.value ?? ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -535,7 +543,11 @@ const UpsertPatientForm = ({
                   <FormItem>
                     <FormLabel>RG do responsável</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input
+                        {...field}
+                        // CORREÇÃO: Converte null para string vazia
+                        value={field.value ?? ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

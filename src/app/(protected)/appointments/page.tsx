@@ -17,7 +17,10 @@ import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 import AddAppointmentButton from "./_components/add-appointment-button";
-import { appointmentsTableColumns } from "./_components/table-columns";
+import {
+  appointmentsTableColumns,
+  AppointmentWithRelations, // Importação agora funciona
+} from "./_components/table-columns";
 
 const AppointmentsPage = async () => {
   const session = await auth.api.getSession({
@@ -48,6 +51,17 @@ const AppointmentsPage = async () => {
     }),
   ]);
 
+  // ADAPTAÇÃO: Mapeia os dados para incluir 'specialty' como string,
+  // conforme exigido pelo tipo AppointmentWithRelations e colunas da tabela.
+  const adaptedAppointments = appointments.map((appointment) => ({
+    ...appointment,
+    doctor: {
+      ...appointment.doctor,
+      // O Drizzle retorna 'specialties' como array, usamos o primeiro item.
+      specialty: appointment.doctor.specialties[0] ?? "Sem especialidade",
+    },
+  })) as AppointmentWithRelations[];
+
   return (
     <PageContainer>
       <PageHeader>
@@ -62,7 +76,11 @@ const AppointmentsPage = async () => {
         </PageActions>
       </PageHeader>
       <PageContent>
-        <DataTable data={appointments} columns={appointmentsTableColumns} />
+        {/* CORREÇÃO: Passa a lista de agendamentos adaptados */}
+        <DataTable
+          data={adaptedAppointments}
+          columns={appointmentsTableColumns}
+        />
       </PageContent>
     </PageContainer>
   );

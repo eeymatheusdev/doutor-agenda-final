@@ -16,7 +16,7 @@ import { doctorsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 import AddDoctorButton from "./_components/add-doctor-button";
-import DoctorCard from "./_components/doctor-card";
+import DoctorCard, { Doctor } from "./_components/doctor-card";
 
 const DoctorsPage = async () => {
   const session = await auth.api.getSession({
@@ -34,6 +34,15 @@ const DoctorsPage = async () => {
   const doctors = await db.query.doctorsTable.findMany({
     where: eq(doctorsTable.clinicId, session.user.clinic.id),
   });
+
+  // CORREÇÃO: Mapeia os dados retornados para converter a string dateOfBirth em objeto Date,
+  // resolvendo a incompatibilidade de tipos com a interface Doctor.
+  const adaptedDoctors: Doctor[] = doctors.map((doctor) => ({
+    ...doctor,
+    // Converte a string ISO (retornada pelo Drizzle) para um objeto Date
+    dateOfBirth: new Date(doctor.dateOfBirth),
+  })) as Doctor[];
+
   return (
     <PageContainer>
       <PageHeader>
@@ -47,7 +56,7 @@ const DoctorsPage = async () => {
       </PageHeader>
       <PageContent>
         <div className="grid grid-cols-3 gap-6">
-          {doctors.map((doctor) => (
+          {adaptedDoctors.map((doctor) => (
             <DoctorCard key={doctor.id} doctor={doctor} />
           ))}
         </div>

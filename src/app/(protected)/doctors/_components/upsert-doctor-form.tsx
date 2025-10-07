@@ -133,8 +133,13 @@ const formSchema = z
 
 // Novo tipo para o objeto doctor de entrada, pois specialties agora é um array
 interface DoctorWithArraySpecialties
-  extends Omit<typeof doctorsTable.$inferSelect, "specialties"> {
+  extends Omit<
+    typeof doctorsTable.$inferSelect,
+    "specialties" | "dateOfBirth"
+  > {
   specialties: DentalSpecialty[] | null;
+  // CORREÇÃO: Define dateOfBirth como string | null, pois é assim que é passado para o form.
+  dateOfBirth: string | null;
 }
 
 interface UpsertDoctorFormProps {
@@ -157,6 +162,7 @@ const UpsertDoctorForm = ({
     name: doctor?.name ?? "",
     cro: doctor?.cro ?? "",
     email: doctor?.email ?? "",
+    // Usa a string/null vinda do prop 'doctor', que será tratada por parseDate para inicializar o form
     dateOfBirth: parseDate(doctor?.dateOfBirth),
     rg: doctor?.rg ?? "",
     cpf: doctor?.cpf ?? "",
@@ -184,12 +190,12 @@ const UpsertDoctorForm = ({
   const form = useForm<z.infer<typeof formSchema>>({
     shouldUnregister: true,
     resolver: zodResolver(formSchema),
-    defaultValues: defaultValues,
+    defaultValues: defaultValues as any, // Adicionado 'as any' temporariamente para evitar conflito de tipos de dateOfBirth com o form
   });
 
   useEffect(() => {
     if (isOpen) {
-      form.reset(defaultValues);
+      form.reset(defaultValues as any);
     }
   }, [isOpen, form, doctor]);
 
@@ -227,18 +233,16 @@ const UpsertDoctorForm = ({
   const handleSpecialtyChange = (value: string) => {
     const specialties = form.getValues("specialties");
 
-    if (specialties.includes(value)) {
+    if (specialties.includes(value as DentalSpecialty)) {
       form.setValue(
         "specialties",
         specialties.filter((s) => s !== value) as DentalSpecialty[],
         { shouldValidate: true },
       );
     } else {
-      form.setValue(
-        "specialties",
-        [...specialties, value] as DentalSpecialty[],
-        { shouldValidate: true },
-      );
+      form.setValue("specialties", [...specialties, value as DentalSpecialty], {
+        shouldValidate: true,
+      });
     }
   };
 
@@ -440,7 +444,11 @@ const UpsertDoctorForm = ({
                   <FormItem>
                     <FormLabel>Complemento (Opcional)</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input
+                        {...field}
+                        // CORREÇÃO: Garante que o valor é uma string vazia se for null/undefined
+                        value={field.value ?? ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -530,7 +538,9 @@ const UpsertDoctorForm = ({
                         value={specialty.value}
                         // Marcar como selecionado visualmente
                         data-state={
-                          selectedSpecialties.includes(specialty.value)
+                          selectedSpecialties.includes(
+                            specialty.value as DentalSpecialty,
+                          )
                             ? "checked"
                             : "unchecked"
                         }
@@ -580,6 +590,8 @@ const UpsertDoctorForm = ({
                   <Input
                     placeholder="Ex: Mestrado em Implantodontia"
                     {...field}
+                    // CORREÇÃO: Garante que o valor é uma string vazia se for null/undefined
+                    value={field.value ?? ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -594,7 +606,11 @@ const UpsertDoctorForm = ({
               <FormItem>
                 <FormLabel>Observações (Opcional)</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input
+                    {...field}
+                    // CORREÇÃO: Garante que o valor é uma string vazia se for null/undefined
+                    value={field.value ?? ""}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

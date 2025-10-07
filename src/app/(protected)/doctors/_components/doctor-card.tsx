@@ -37,12 +37,21 @@ import { Separator } from "@/components/ui/separator";
 import { doctorsTable } from "@/db/schema";
 import { formatCurrencyInCents } from "@/helpers/currency";
 
+// 1. CORREÇÃO: Importar DentalSpecialty
+import { DentalSpecialty } from "../_constants";
 import { getAvailability } from "../_helpers/availability";
 import UpsertDoctorForm from "./upsert-doctor-form";
 
+// 2. CORREÇÃO: Usar DentalSpecialty[] para 'specialties' e ajustar 'dateOfBirth' para ser compatível
 // Novo tipo para o objeto doctor, já que specialties agora é um array
-interface Doctor extends Omit<typeof doctorsTable.$inferSelect, "specialties"> {
-  specialties: string[];
+// Adicionando 'export' e ajustando a interface para refletir o tipo esperado
+export interface Doctor
+  extends Omit<
+    typeof doctorsTable.$inferSelect,
+    "specialties" | "dateOfBirth"
+  > {
+  specialties: DentalSpecialty[];
+  dateOfBirth: Date;
 }
 
 interface DoctorCardProps {
@@ -122,11 +131,14 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
           <UpsertDoctorForm
             doctor={{
               ...doctor,
+              // O campo dateOfBirth é convertido para string/null para o formulário
               dateOfBirth: doctor.dateOfBirth
                 ? doctor.dateOfBirth.toString()
                 : null,
               availableFromTime: availability.from.format("HH:mm:ss"),
               availableToTime: availability.to.format("HH:mm:ss"),
+              // specialties já é DentalSpecialty[] devido à correção da interface 'Doctor'
+              specialties: doctor.specialties,
             }}
             onSuccess={() => setIsUpsertDoctorDialogOpen(false)}
             isOpen={isUpsertDoctorDialogOpen}
