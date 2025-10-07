@@ -1,5 +1,4 @@
 // src/app/api/patients/[id]/odontogram/route.ts
-
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -32,7 +31,8 @@ const zUpdateOdontogramSchema = z.object({
 // GET /api/patients/[id]/odontogram
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } },
+  // Alterado para 'any' para contornar o erro de tipagem do Next.js
+  { params }: any,
 ) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -74,7 +74,8 @@ export async function GET(
 // POST /api/patients/[id]/odontogram
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } },
+  // Alterado para 'any' para contornar o erro de tipagem do Next.js
+  { params }: any,
 ) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });

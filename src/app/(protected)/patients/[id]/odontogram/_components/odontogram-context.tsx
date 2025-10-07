@@ -41,7 +41,7 @@ function stateToMarks(state: OdontogramState): OdontogramMark[] {
   const allMarks: OdontogramMark[] = Object.values(state).flatMap(
     (tooth) =>
       Object.values(tooth.marks).filter(
-        (mark) => mark.status !== "saudavel",
+        (mark) => mark && mark.status !== "saudavel",
       ) as OdontogramMark[],
   );
   return allMarks;
@@ -69,6 +69,12 @@ function stateToVisual(state: OdontogramState): VisualOdontogram {
 // -----------------------------------------------------------------------------
 // 2. Context Definition e Hook
 // -----------------------------------------------------------------------------
+
+// Tipo de dado retornado pela query (objeto ou null)
+type OdontogramFetchData = {
+  id: string;
+  marks: OdontogramMark[];
+} | null;
 
 interface OdontogramContextProps {
   patientId: string;
@@ -128,13 +134,18 @@ export function OdontogramProvider({
   const isModalOpen = !!selectedTooth && !!selectedFace;
 
   // Query para buscar dados existentes
-  const { isLoading, refetch } = useQuery({
-    queryKey: ["odontogram", patientId],
+  const { isLoading, refetch } = useQuery<
+    OdontogramFetchData, // TQueryFnData
+    Error, // TError
+    OdontogramFetchData, // TData
+    readonly ["odontogram", string] // TQueryKey
+  >({
+    queryKey: ["odontogram", patientId] as const,
     queryFn: async () => {
       const response = await fetch(`/api/patients/${patientId}/odontogram`);
       if (!response.ok) throw new Error("Falha ao buscar odontograma");
       const data = await response.json();
-      return data;
+      return data as OdontogramFetchData;
     },
     onSuccess: (data) => {
       if (data) {

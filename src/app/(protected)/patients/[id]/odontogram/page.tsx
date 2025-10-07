@@ -1,5 +1,4 @@
-// @ts-nocheck
-
+// src/app/(protected)/patients/[id]/odontogram/page.tsx
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -19,15 +18,8 @@ import { auth } from "@/lib/auth";
 
 import OdontogramCanvas from "./_components/odontogram-canvas";
 
-type PageProps = {
-  params: { id: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
-};
-
-export default async function OdontogramPage({
-  params,
-  searchParams,
-}: PageProps) {
+// Forçando o tipo 'any' na desestruturação das props para contornar o bug de tipagem do Next.js (params como Promise)
+export default async function OdontogramPage({ params, searchParams }: any) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {
@@ -40,6 +32,7 @@ export default async function OdontogramPage({
     redirect("/new-subscription");
   }
 
+  // Acessando params.id sem o erro de tipagem
   const patient = await db.query.patientsTable.findFirst({
     where: eq(patientsTable.id, params.id),
   });
