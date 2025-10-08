@@ -1,19 +1,43 @@
 // src/app/(protected)/patients/[id]/odontogram/_components/odontogram-canvas.tsx
 "use client";
 
-import { Save } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon, Save } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { doctorsTable } from "@/db/schema";
+import { cn } from "@/lib/utils";
 
 import { PERMANENT_TEETH_FDI, QuadrantKeys, ToothNumber } from "../_constants";
-import { OdontogramProvider, useOdontogram } from "./odontogram-context";
+import { OdontogramProvider, useOdontogram } from "./odontogram-context"; // CORRIGIDO
 import { Tooth } from "./tooth";
+
+// Tipo para o médico simplificado (o mesmo usado em odontogram-context)
+type Doctor = Pick<
+  typeof doctorsTable.$inferSelect,
+  "id" | "name" | "specialties"
+>;
 
 interface OdontogramCanvasBaseProps {
   patientId: string;
+  doctors: Doctor[]; // Recebe a lista de médicos
 }
 
 const QUADRANT_IS_UPPER: Record<QuadrantKeys, boolean> = {
@@ -46,17 +70,89 @@ function Quadrant({
 }
 
 function OdontogramCanvasBase() {
-  const { saveOdontogram, isSaving } = useOdontogram();
+  const {
+    saveNewOdontogramRecord,
+    isSaving,
+    doctors,
+    currentDoctorId,
+    setCurrentDoctorId,
+    currentDate,
+    setCurrentDate,
+    odontogramState, // Usado para forçar um "dirty" check
+  } = useOdontogram();
+
+  const hasDoctors = doctors && doctors.length > 0;
+
+  // Condição para desabilitar: se não tiver médico selecionado ou se estiver salvando
+  const isDisabled =
+    isSaving || !hasDoctors || !currentDoctorId || !currentDate;
 
   return (
-    <Card className="max-w-6xl">
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>Arcada Dentária Permanente</CardTitle>
-        <div className="flex justify-end">
-          <Button onClick={saveOdontogram} disabled={isSaving}>
+        <div className="flex w-full justify-between">
+          <CardTitle>Arcada Dentária Permanente</CardTitle>
+          <Button onClick={saveNewOdontogramRecord} disabled={isDisabled}>
             <Save className="mr-2 h-4 w-4" />
-            {isSaving ? "Salvando..." : "Salvar Odontograma"}
+            {isSaving ? "Salvando..." : "Salvar Novo Registro"}
           </Button>
+        </div>
+        {/* NOVOS CAMPOS: Médico e Data do Registro */}
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+          {/* Seleção do Médico */}
+          <Select
+            value={currentDoctorId}
+            onValueChange={(value) => setCurrentDoctorId(value)}
+            disabled={!hasDoctors || isSaving}
+          >
+            <SelectTrigger className="w-full sm:w-[250px]">
+              <SelectValue placeholder="Selecione o Médico" />
+            </SelectTrigger>
+            <SelectContent>
+              {doctors.map((doctor) => (
+                <SelectItem key={doctor.id} value={doctor.id}>
+                  {doctor.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Seleção da Data */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal sm:w-[200px]",
+                  !currentDate && "text-muted-foreground",
+                )}
+                disabled={isSaving}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {currentDate ? (
+                  format(currentDate, "PPP", { locale: ptBR })
+                ) : (
+                  <span>Selecione a data</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                captionLayout="dropdown-buttons"
+                selected={currentDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setCurrentDate(date);
+                  }
+                }}
+                // Permite datas no futuro (para agendar um registro)
+                toYear={new Date().getFullYear() + 1}
+                initialFocus
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </CardHeader>
       <CardContent>
@@ -98,7 +194,7 @@ function OdontogramCanvasBase() {
 
 export default function OdontogramCanvas(props: OdontogramCanvasBaseProps) {
   return (
-    <OdontogramProvider patientId={props.patientId}>
+    <OdontogramProvider patientId={props.patientId} doctors={props.doctors}>
       <OdontogramCanvasBase />
     </OdontogramProvider>
   );

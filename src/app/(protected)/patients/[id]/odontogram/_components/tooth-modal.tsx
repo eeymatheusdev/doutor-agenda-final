@@ -38,7 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { ODONTOGRAM_STATUS_MAP, TOOTH_FACES, ToothFace } from "../_constants";
 import { OdontogramMark } from "../_types";
-import { useOdontogram } from "./odontogram-context";
+import { useOdontogram } from "./odontogram-context"; // CORRIGIDO
 
 // As opções de status são derivadas do mapa de constantes
 const statusOptions = Object.entries(ODONTOGRAM_STATUS_MAP).map(
@@ -71,7 +71,7 @@ export default function ToothModal() {
     isModalOpen,
     closeModal,
     isSaving,
-    saveOdontogram,
+    saveOdontogram, // Chamado para persistir a alteração
   } = useOdontogram();
 
   const existingMark =
@@ -97,7 +97,7 @@ export default function ToothModal() {
     }
   }, [isModalOpen, existingMark, form]);
 
-  const onSubmit = (values: ToothMarkFormValues) => {
+  const onSubmit = async (values: ToothMarkFormValues) => {
     if (!selectedTooth || !selectedFace) return;
 
     const newMark: OdontogramMark = {
@@ -129,8 +129,9 @@ export default function ToothModal() {
       };
     });
 
-    // 2. Salva no banco de dados
-    saveOdontogram();
+    // 2. Salva no banco de dados (via context)
+    // Usamos o `await` para garantir que o save termine antes de fechar o modal
+    await saveOdontogram();
 
     // 3. Fecha o modal
     closeModal();

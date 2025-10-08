@@ -18,7 +18,7 @@ import { doctorsTable } from "@/db/schema";
 
 import { ODONTOGRAM_STATUS_MAP } from "../_constants";
 import { OdontogramMarkDb } from "../_types";
-import { useOdontogram } from "./odontogram-context";
+import { useOdontogram } from "./odontogram-context"; // CORRIGIDO
 
 // Tipo para o médico simplificado (o mesmo usado em odontogram-context)
 type Doctor = Pick<

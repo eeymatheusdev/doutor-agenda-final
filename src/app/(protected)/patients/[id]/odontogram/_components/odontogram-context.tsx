@@ -1,200 +1,385 @@
-// src/app/(protected)/patients/[id]/odontogram/_components/odontogram-canvas.tsx
+// src/app/(protected)/patients/[id]/odontogram/_components/odontogram-context.tsx
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Save } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { doctorsTable } from "@/db/schema";
-import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/auth-client"; // CORRIGIDO: Importa authClient
 
-import { PERMANENT_TEETH_FDI, QuadrantKeys, ToothNumber } from "../_constants";
-import { OdontogramProvider, useOdontogram } from "./odontogram-context";
-import { Tooth } from "./tooth";
+import {
+  ODONTOGRAM_STATUS_MAP,
+  PERMANENT_TEETH_FDI,
+  ToothFace,
+} from "../_constants";
+import {
+  OdontogramMark,
+  OdontogramRecord,
+  OdontogramState,
+  ToothNumber,
+  VisualOdontogram,
+} from "../_types";
+import ToothModal from "./tooth-modal";
 
-// Tipo para o médico simplificado (o mesmo usado em odontogram-context)
+// Define o Doctor type
 type Doctor = Pick<
   typeof doctorsTable.$inferSelect,
   "id" | "name" | "specialties"
 >;
 
-interface OdontogramCanvasBaseProps {
-  patientId: string;
-  doctors: Doctor[]; // Recebe a lista de médicos
+// --- Definição do Contexto ---
+
+interface OdontogramContextProps {
+  // Estado
+  odontogramState: OdontogramState;
+  visualOdontogram: VisualOdontogram;
+  selectedTooth: ToothNumber | null;
+  selectedFace: ToothFace | null;
+  isModalOpen: boolean;
+  isSaving: boolean;
+  allOdontogramRecords: OdontogramRecord[] | undefined;
+
+  // Novos campos obrigatórios
+  doctors: Doctor[];
+  currentDoctorId: string;
+  currentDate: Date;
+
+  // Ações
+  selectTooth: (toothNumber: ToothNumber, face: ToothFace) => void;
+  closeModal: () => void;
+  setOdontogramState: React.Dispatch<React.SetStateAction<OdontogramState>>;
+  saveOdontogram: () => Promise<void>; // Salva o estado atual no banco (chamado pelo modal)
+  saveNewOdontogramRecord: () => Promise<void>; // Salva como novo registro (chamado pelo botão)
+  loadRecordToCanvas: (record: OdontogramRecord) => void;
+  setCurrentDoctorId: React.Dispatch<React.SetStateAction<string>>;
+  setCurrentDate: React.Dispatch<React.SetStateAction<Date>>;
 }
 
-const QUADRANT_IS_UPPER: Record<QuadrantKeys, boolean> = {
-  quadrant1: true,
-  quadrant2: true,
-  quadrant3: false,
-  quadrant4: false,
+const OdontogramContext = React.createContext<
+  OdontogramContextProps | undefined
+>(undefined);
+
+export const useOdontogram = () => {
+  const context = React.useContext(OdontogramContext);
+  if (!context) {
+    throw new Error("useOdontogram must be used within an OdontogramProvider");
+  }
+  return context;
 };
 
-function Quadrant({
-  quadrant,
-  isUpper,
-}: {
-  quadrant: ToothNumber[];
-  isUpper: boolean;
-}) {
-  const { visualOdontogram } = useOdontogram();
-  return (
-    <div className={"flex min-w-[280px] gap-1"}>
-      {quadrant.map((toothNumber) => (
-        <Tooth
-          key={toothNumber}
-          toothNumber={toothNumber}
-          marks={visualOdontogram[toothNumber] || {}}
-          isUpper={isUpper}
-        />
-      ))}
-    </div>
-  );
+// Helper para criar estado inicial vazio (32 dentes permanentes)
+const getInitialOdontogramState = (): OdontogramState => {
+  const state: OdontogramState = {};
+  const allTeeth = [
+    ...PERMANENT_TEETH_FDI.quadrant1,
+    ...PERMANENT_TEETH_FDI.quadrant2,
+    ...PERMANENT_TEETH_FDI.quadrant3,
+    ...PERMANENT_TEETH_FDI.quadrant4,
+  ];
+  for (const toothNumber of allTeeth) {
+    state[toothNumber as ToothNumber] = {
+      toothNumber: toothNumber as ToothNumber,
+      marks: {},
+    };
+  }
+  return state;
+};
+
+// Helper para converter OdontogramRecord para OdontogramState
+const recordToState = (record: OdontogramRecord): OdontogramState => {
+  const newState = getInitialOdontogramState();
+
+  for (const mark of record.marks) {
+    const toothNumber = mark.toothNumber as ToothNumber;
+    const face = mark.face as ToothFace;
+
+    if (newState[toothNumber]) {
+      const cleanMark: OdontogramMark = {
+        id: mark.id,
+        toothNumber: mark.toothNumber as ToothNumber,
+        face: mark.face as ToothFace,
+        status: mark.status as any,
+        observation: mark.observation || null,
+      };
+
+      newState[toothNumber].marks[face] = cleanMark;
+    }
+  }
+
+  return newState;
+};
+
+// Helper para converter OdontogramState para VisualOdontogram (para renderização)
+const stateToVisual = (state: OdontogramState): VisualOdontogram => {
+  const visual: VisualOdontogram = {};
+
+  for (const toothNumber in state) {
+    visual[toothNumber as ToothNumber] = {};
+    const toothState = state[toothNumber as ToothNumber];
+
+    for (const face in toothState.marks) {
+      const mark = toothState.marks[face as ToothFace];
+      if (mark && mark.status !== "saudavel") {
+        const config = ODONTOGRAM_STATUS_MAP[mark.status];
+        visual[toothNumber as ToothNumber][face as ToothFace] = {
+          color: config.color,
+          status: mark.status,
+          observation: mark.observation,
+        };
+      }
+    }
+  }
+  return visual;
+};
+
+// Helper para extrair as marcas a serem salvas
+const getMarksToSave = (state: OdontogramState): OdontogramMark[] => {
+  const marks: OdontogramMark[] = [];
+  for (const toothNumber in state) {
+    const tooth = state[toothNumber as ToothNumber];
+    for (const face in tooth.marks) {
+      const mark = tooth.marks[face as ToothFace];
+      // Só inclui marcas não-saudáveis
+      if (mark && mark.status !== "saudavel") {
+        marks.push(mark);
+      }
+    }
+  }
+  return marks;
+};
+
+// --- Componente Provider ---
+
+interface OdontogramProviderProps {
+  patientId: string;
+  doctors: Doctor[];
+  children: React.ReactNode;
 }
 
-function OdontogramCanvasBase() {
-  const {
-    saveNewOdontogramRecord,
-    isSaving,
-    doctors,
+export function OdontogramProvider({
+  patientId,
+  doctors,
+  children,
+}: OdontogramProviderProps) {
+  // CORRIGIDO: Usa authClient.useSession()
+  const { data: session } = authClient.useSession();
+  const [odontogramState, setOdontogramState] = React.useState<OdontogramState>(
+    getInitialOdontogramState,
+  );
+  const [selectedTooth, setSelectedTooth] = React.useState<ToothNumber | null>(
+    null,
+  );
+  const [selectedFace, setSelectedFace] = React.useState<ToothFace | null>(
+    null,
+  );
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  // Novos campos
+  const [currentDoctorId, setCurrentDoctorId] = React.useState(
+    doctors[0]?.id || "",
+  );
+  const [currentDate, setCurrentDate] = React.useState(new Date());
+
+  // --- Estado Derivado ---
+  const visualOdontogram = React.useMemo(
+    () => stateToVisual(odontogramState),
+    [odontogramState],
+  );
+
+  // --- Busca de Dados (Histórico) ---
+  const { data: allOdontogramRecords, refetch: refetchHistory } = useQuery<
+    OdontogramRecord[]
+  >({
+    queryKey: ["odontogram-history", patientId],
+    queryFn: async () => {
+      const res = await fetch(`/api/patients/${patientId}/odontogram`);
+      if (!res.ok) throw new Error("Failed to fetch odontogram history");
+      return res.json();
+    },
+    enabled: !!session?.user?.clinic?.id && !!patientId,
+  });
+
+  // Carrega o registro mais recente na inicialização
+  React.useEffect(() => {
+    if (allOdontogramRecords && allOdontogramRecords.length > 0) {
+      // Carrega o primeiro (mais recente) registro
+      loadRecordToCanvas(allOdontogramRecords[0], { silent: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allOdontogramRecords]);
+
+  // --- Ações ---
+
+  const selectTooth = React.useCallback(
+    (toothNumber: ToothNumber, face: ToothFace) => {
+      setSelectedTooth(toothNumber);
+      setSelectedFace(face);
+      setIsModalOpen(true);
+    },
+    [],
+  );
+
+  const closeModal = React.useCallback(() => {
+    setIsModalOpen(false);
+    setSelectedTooth(null);
+    setSelectedFace(null);
+  }, []);
+
+  const saveOdontogram = React.useCallback(async () => {
+    if (!currentDoctorId || !currentDate) {
+      toast.error("Selecione o médico e a data para salvar o registro.");
+      return;
+    }
+
+    setIsSaving(true);
+    const marksToSave = getMarksToSave(odontogramState);
+
+    try {
+      const response = await fetch(`/api/patients/${patientId}/odontogram`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          marks: marksToSave,
+          doctorId: currentDoctorId,
+          date: format(currentDate, "yyyy-MM-dd"),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save odontogram record");
+      }
+
+      toast.success("Marcação salva e novo registro criado com sucesso!");
+      refetchHistory(); // Atualiza a lista de histórico
+    } catch (error) {
+      console.error("Save Odontogram Error:", error);
+      toast.error("Erro ao salvar o registro de odontograma.");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    odontogramState,
+    patientId,
     currentDoctorId,
-    setCurrentDoctorId,
     currentDate,
-    setCurrentDate,
-  } = useOdontogram();
+    refetchHistory,
+  ]);
 
-  // A lista de médicos precisa ter pelo menos um item para o Select funcionar corretamente.
-  const hasDoctors = doctors && doctors.length > 0;
+  const saveNewOdontogramRecord = React.useCallback(async () => {
+    // A lógica é a mesma de saveOdontogram, mas com feedback diferente e auto-avanço da data
+    if (!currentDoctorId || !currentDate) {
+      toast.error("Selecione o médico e a data para salvar o novo registro.");
+      return;
+    }
 
-  return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex w-full justify-between">
-          <CardTitle>Arcada Dentária Permanente</CardTitle>
-          <Button
-            onClick={saveNewOdontogramRecord}
-            disabled={isSaving || !hasDoctors}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {isSaving ? "Salvando..." : "Salvar Novo Registro"}
-          </Button>
-        </div>
-        {/* NOVOS CAMPOS: Médico e Data do Registro */}
-        <div className="flex flex-col gap-2 pt-2 sm:flex-row">
-          {/* Seleção do Médico */}
-          <Select
-            value={currentDoctorId}
-            onValueChange={(value) => setCurrentDoctorId(value)}
-            disabled={!hasDoctors || isSaving}
-          >
-            <SelectTrigger className="w-full sm:w-[250px]">
-              <SelectValue placeholder="Selecione o Médico" />
-            </SelectTrigger>
-            <SelectContent>
-              {doctors.map((doctor) => (
-                <SelectItem key={doctor.id} value={doctor.id}>
-                  {doctor.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    setIsSaving(true);
+    const marksToSave = getMarksToSave(odontogramState);
 
-          {/* Seleção da Data */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-full justify-start text-left font-normal sm:w-[200px]",
-                  !currentDate && "text-muted-foreground",
-                )}
-                disabled={isSaving}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {currentDate ? (
-                  format(currentDate, "PPP", { locale: ptBR })
-                ) : (
-                  <span>Selecione a data</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                captionLayout="dropdown-buttons"
-                selected={currentDate}
-                onSelect={(date) => {
-                  if (date) {
-                    setCurrentDate(date);
-                  }
-                }}
-                // Permite datas no futuro (para agendar um registro)
-                toYear={new Date().getFullYear() + 1}
-                initialFocus
-                locale={ptBR}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col items-center gap-6">
-          {/* Arcada Superior */}
-          <div className="flex justify-center gap-4">
-            {/* Superior Direito (18 a 11) */}
-            <Quadrant
-              quadrant={PERMANENT_TEETH_FDI.quadrant1}
-              isUpper={QUADRANT_IS_UPPER.quadrant1}
-            />
-            {/* Superior Esquerdo (21 a 28) */}
-            <Quadrant
-              quadrant={PERMANENT_TEETH_FDI.quadrant2}
-              isUpper={QUADRANT_IS_UPPER.quadrant2}
-            />
-          </div>
+    try {
+      const response = await fetch(`/api/patients/${patientId}/odontogram`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          marks: marksToSave,
+          doctorId: currentDoctorId,
+          date: format(currentDate, "yyyy-MM-dd"),
+        }),
+      });
 
-          <Separator className="w-full" />
+      if (!response.ok) {
+        throw new Error("Failed to create new odontogram record");
+      }
 
-          {/* Arcada Inferior */}
-          <div className="flex justify-center gap-4">
-            {/* Inferior Direito (41 a 48) */}
-            <Quadrant
-              quadrant={PERMANENT_TEETH_FDI.quadrant4}
-              isUpper={QUADRANT_IS_UPPER.quadrant4}
-            />
-            {/* Inferior Esquerdo (31 a 38) */}
-            <Quadrant
-              quadrant={PERMANENT_TEETH_FDI.quadrant3}
-              isUpper={QUADRANT_IS_UPPER.quadrant3}
-            />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      // Limpa a tela para começar o novo registro e avança a data
+      setOdontogramState(getInitialOdontogramState());
+      setCurrentDate(new Date());
+
+      toast.success("Novo registro de odontograma criado com sucesso!");
+      refetchHistory();
+    } catch (error) {
+      console.error("Create New Odontogram Error:", error);
+      toast.error("Erro ao criar novo registro.");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    odontogramState,
+    patientId,
+    currentDoctorId,
+    currentDate,
+    refetchHistory,
+  ]);
+
+  const loadRecordToCanvas = React.useCallback(
+    (record: OdontogramRecord, { silent = false } = {}) => {
+      const newState = recordToState(record);
+      setOdontogramState(newState);
+      setCurrentDoctorId(record.doctor.id);
+      setCurrentDate(new Date(record.date)); // Carrega a data do registro
+
+      if (!silent) {
+        toast.info(
+          `Visualizando registro de ${format(new Date(record.date), "dd/MM/yyyy", { locale: ptBR })}.`,
+        );
+      }
+    },
+    [],
   );
-}
 
-export default function OdontogramCanvas(props: OdontogramCanvasBaseProps) {
+  const contextValue = React.useMemo(
+    () => ({
+      odontogramState,
+      setOdontogramState,
+      visualOdontogram,
+      selectedTooth,
+      selectedFace,
+      isModalOpen,
+      closeModal,
+      selectTooth,
+      isSaving,
+      saveOdontogram,
+      saveNewOdontogramRecord,
+      allOdontogramRecords,
+      loadRecordToCanvas,
+      doctors,
+      currentDoctorId,
+      setCurrentDoctorId,
+      currentDate,
+      setCurrentDate,
+    }),
+    [
+      odontogramState,
+      visualOdontogram,
+      selectedTooth,
+      selectedFace,
+      isModalOpen,
+      closeModal,
+      selectTooth,
+      isSaving,
+      saveOdontogram,
+      saveNewOdontogramRecord,
+      allOdontogramRecords,
+      loadRecordToCanvas,
+      doctors,
+      currentDoctorId,
+      setCurrentDoctorId,
+      currentDate,
+      setCurrentDate,
+    ],
+  );
+
   return (
-    <OdontogramProvider patientId={props.patientId} doctors={props.doctors}>
-      <OdontogramCanvasBase />
-    </OdontogramProvider>
+    <OdontogramContext.Provider value={contextValue}>
+      {children}
+      {isModalOpen && <ToothModal />}
+    </OdontogramContext.Provider>
   );
 }
