@@ -23,12 +23,7 @@ const zOdontogramMark = z.object({
   observation: z.string().optional().nullable(),
 });
 
-const zUpdateOdontogramSchema = z.object({
-  marks: z.array(zOdontogramMark),
-  odontogramId: z.string().uuid().optional(),
-});
-
-// GET /api/patients/[id]/odontogram
+// GET /api/patients/[id]/odontogram - Agora retorna a lista completa de registros
 export async function GET(
   request: Request,
   // Alterado para 'any' para contornar o erro de tipagem do Next.js
@@ -52,16 +47,24 @@ export async function GET(
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
-    // Busca o odontograma mais recente para o paciente
-    const odontogram = await db.query.odontogramsTable.findFirst({
+    // Busca TODOS os odontogramas, ordenados do mais recente para o mais antigo,
+    // e inclui as marcas e o nome do médico.
+    const odontograms = await db.query.odontogramsTable.findMany({
       where: eq(odontogramsTable.patientId, patientId),
-      orderBy: (odontograms, { desc }) => [desc(odontograms.createdAt)],
+      orderBy: (odontograms, { desc }) => [desc(odontograms.date)], // Ordena pela data do registro
       with: {
         marks: true,
+        doctor: {
+          columns: {
+            name: true, // Apenas o nome do médico é necessário
+            id: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(odontogram);
+    // Retorna todos os registros
+    return NextResponse.json(odontograms);
   } catch (error) {
     console.error("GET Odontogram Error:", error);
     return NextResponse.json(
@@ -71,7 +74,7 @@ export async function GET(
   }
 }
 
-// POST /api/patients/[id]/odontogram
+// POST /api/patients/[id]/odontogram - Agora sempre cria um novo registro
 export async function POST(
   request: Request,
   // Alterado para 'any' para contornar o erro de tipagem do Next.js
@@ -86,7 +89,14 @@ export async function POST(
     const patientId = params.id;
     const body = await request.json();
 
-    const result = zUpdateOdontogramSchema.safeParse(body);
+    // Novo schema de validação para o POST
+    const validationSchema = z.object({
+      marks: z.array(zOdontogramMark),
+      doctorId: z.string().uuid(), // Novo
+      date: z.string().date(), // Novo
+    });
+
+    const result = validationSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid request body", details: result.error },
@@ -94,7 +104,7 @@ export async function POST(
       );
     }
 
-    const { marks, odontogramId } = result.data;
+    const { marks, doctorId, date } = result.data; // Desestrutura os novos campos
 
     const patient = await db.query.patientsTable.findFirst({
       where: and(
@@ -107,39 +117,33 @@ export async function POST(
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
-    let currentOdontogramId = odontogramId;
+    // 1. Cria um NOVO odontograma (registro) para o paciente
+    const [newOdontogram] = await db
+      .insert(odontogramsTable)
+      .values({
+        patientId: patientId,
+        clinicId: session.user.clinic.id,
+        doctorId: doctorId, // Salva o ID do médico
+        date: date, // Salva a data do registro
+      })
+      .returning({ id: odontogramsTable.id });
+    const newOdontogramId = newOdontogram.id;
 
-    // Se não houver ID, cria um novo odontograma para o paciente
-    if (!currentOdontogramId) {
-      const [newOdontogram] = await db
-        .insert(odontogramsTable)
-        .values({
-          patientId: patientId,
-          clinicId: session.user.clinic.id,
-        })
-        .returning({ id: odontogramsTable.id });
-      currentOdontogramId = newOdontogram.id;
-    }
-
-    // Deleta todas as marcas existentes para o odontograma atual para um "full update"
-    await db
-      .delete(odontogramMarksTable)
-      .where(eq(odontogramMarksTable.odontogramId, currentOdontogramId));
-
-    // Insere as novas marcas (apenas as não-saudáveis são enviadas)
+    // 2. Insere as marcas associadas a este novo registro (apenas as não-saudáveis)
     if (marks.length > 0) {
       const newMarks = marks.map((mark) => ({
         ...mark,
-        odontogramId: currentOdontogramId!,
+        odontogramId: newOdontogramId,
       }));
       await db.insert(odontogramMarksTable).values(newMarks);
     }
 
+    // Revalida o path para que a lista de registros seja atualizada na próxima requisição
     revalidatePath(`/patients/${patientId}/odontogram`);
 
     return NextResponse.json({
       success: true,
-      odontogramId: currentOdontogramId,
+      odontogramId: newOdontogramId,
     });
   } catch (error) {
     console.error("POST Odontogram Error:", error);

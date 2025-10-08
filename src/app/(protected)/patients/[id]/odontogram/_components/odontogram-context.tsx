@@ -1,265 +1,200 @@
-// src/app/(protected)/patients/[id]/odontogram/_components/odontogram-context.tsx
+// src/app/(protected)/patients/[id]/odontogram/_components/odontogram-canvas.tsx
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon, Save } from "lucide-react";
 import * as React from "react";
-import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  ODONTOGRAM_STATUS_MAP,
-  PERMANENT_TEETH_FDI,
-  ToothFace,
-  ToothNumber,
-} from "../_constants";
-import { OdontogramMark, OdontogramState, VisualOdontogram } from "../_types";
-import ToothModal from "./tooth-modal";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { doctorsTable } from "@/db/schema";
+import { cn } from "@/lib/utils";
 
-// [Cite: 179]
-// -----------------------------------------------------------------------------
-// 1. Helpers para Manipulação de Estado
-// -----------------------------------------------------------------------------
+import { PERMANENT_TEETH_FDI, QuadrantKeys, ToothNumber } from "../_constants";
+import { OdontogramProvider, useOdontogram } from "./odontogram-context";
+import { Tooth } from "./tooth";
 
-function marksToState(marks: OdontogramMark[]): OdontogramState {
-  const initialState = Object.values(PERMANENT_TEETH_FDI)
-    .flat()
-    .reduce((acc, toothNumber) => {
-      acc[toothNumber] = { toothNumber, marks: {} };
-      return acc;
-    }, {} as OdontogramState);
+// Tipo para o médico simplificado (o mesmo usado em odontogram-context)
+type Doctor = Pick<
+  typeof doctorsTable.$inferSelect,
+  "id" | "name" | "specialties"
+>;
 
-  marks.forEach((mark) => {
-    if (initialState[mark.toothNumber]) {
-      initialState[mark.toothNumber].marks[mark.face] = mark;
-    }
-  });
-
-  return initialState;
-}
-
-function stateToMarks(state: OdontogramState): OdontogramMark[] {
-  const allMarks: OdontogramMark[] = Object.values(state).flatMap(
-    (tooth) =>
-      Object.values(tooth.marks).filter(
-        (mark) => mark && mark.status !== "saudavel",
-      ) as OdontogramMark[],
-  );
-  return allMarks;
-}
-
-function stateToVisual(state: OdontogramState): VisualOdontogram {
-  return Object.values(state).reduce((acc, tooth) => {
-    acc[tooth.toothNumber] = Object.entries(tooth.marks).reduce(
-      (faceAcc, [face, mark]) => {
-        if (mark) {
-          faceAcc[face as ToothFace] = {
-            color: ODONTOGRAM_STATUS_MAP[mark.status].color,
-            status: mark.status,
-            observation: mark.observation,
-          };
-        }
-        return faceAcc;
-      },
-      {} as VisualOdontogram[ToothNumber],
-    );
-    return acc;
-  }, {} as VisualOdontogram);
-}
-
-// -----------------------------------------------------------------------------
-// 2. Context Definition e Hook
-// -----------------------------------------------------------------------------
-
-// Tipo de dado retornado pela query (objeto ou null)
-type OdontogramFetchData = {
-  id: string;
-  marks: OdontogramMark[];
-} | null;
-
-interface OdontogramContextProps {
+interface OdontogramCanvasBaseProps {
   patientId: string;
-  odontogramId: string | undefined;
-  odontogramState: OdontogramState;
-  visualOdontogram: VisualOdontogram;
-  selectedTooth: ToothNumber | null;
-  selectedFace: ToothFace | null;
-  isModalOpen: boolean;
-  setOdontogramState: React.Dispatch<React.SetStateAction<OdontogramState>>;
-  selectTooth: (toothNumber: ToothNumber, face: ToothFace) => void;
-  closeModal: () => void;
-  isLoading: boolean;
-  isSaving: boolean;
-  saveOdontogram: () => void;
+  doctors: Doctor[]; // Recebe a lista de médicos
 }
 
-const OdontogramContext = React.createContext<
-  OdontogramContextProps | undefined
->(undefined);
+const QUADRANT_IS_UPPER: Record<QuadrantKeys, boolean> = {
+  quadrant1: true,
+  quadrant2: true,
+  quadrant3: false,
+  quadrant4: false,
+};
 
-export function useOdontogram() {
-  const context = React.useContext(OdontogramContext);
-  if (!context) {
-    throw new Error("useOdontogram must be used within an OdontogramProvider");
-  }
-  return context;
+function Quadrant({
+  quadrant,
+  isUpper,
+}: {
+  quadrant: ToothNumber[];
+  isUpper: boolean;
+}) {
+  const { visualOdontogram } = useOdontogram();
+  return (
+    <div className={"flex min-w-[280px] gap-1"}>
+      {quadrant.map((toothNumber) => (
+        <Tooth
+          key={toothNumber}
+          toothNumber={toothNumber}
+          marks={visualOdontogram[toothNumber] || {}}
+          isUpper={isUpper}
+        />
+      ))}
+    </div>
+  );
 }
 
-// -----------------------------------------------------------------------------
-// 3. Provider Component
-// -----------------------------------------------------------------------------
+function OdontogramCanvasBase() {
+  const {
+    saveNewOdontogramRecord,
+    isSaving,
+    doctors,
+    currentDoctorId,
+    setCurrentDoctorId,
+    currentDate,
+    setCurrentDate,
+  } = useOdontogram();
 
-interface OdontogramProviderProps {
-  patientId: string;
-  children: React.ReactNode;
-}
-
-export function OdontogramProvider({
-  patientId,
-  children,
-}: OdontogramProviderProps) {
-  const queryClient = useQueryClient();
-  const [odontogramState, setOdontogramState] = React.useState<OdontogramState>(
-    marksToState([]),
-  );
-  const [odontogramId, setOdontogramId] = React.useState<string | undefined>(
-    undefined,
-  );
-  const [selectedTooth, setSelectedTooth] = React.useState<ToothNumber | null>(
-    null,
-  );
-  const [selectedFace, setSelectedFace] = React.useState<ToothFace | null>(
-    null,
-  );
-
-  const isModalOpen = !!selectedTooth && !!selectedFace;
-
-  // Query para buscar dados existentes
-  // ADICIONAR 'data' ao retorno e REMOVER 'onSuccess'
-  const { isLoading, data, refetch } = useQuery<
-    OdontogramFetchData, // TQueryFnData
-    Error, // TError
-    OdontogramFetchData, // TData
-    readonly ["odontogram", string] // TQueryKey
-  >({
-    queryKey: ["odontogram", patientId] as const,
-    queryFn: async () => {
-      const response = await fetch(`/api/patients/${patientId}/odontogram`);
-      if (!response.ok) throw new Error("Falha ao buscar odontograma");
-      const data = await response.json();
-      return data as OdontogramFetchData;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos de cache
-  });
-
-  // EFEITO COLATERAL: Lógica de inicialização baseada nos dados (substitui onSuccess)
-  React.useEffect(() => {
-    // Verifica se os dados foram carregados (data pode ser objeto ou null)
-    if (data !== undefined) {
-      if (data) {
-        setOdontogramId(data.id);
-        setOdontogramState(marksToState(data.marks || []));
-      } else {
-        // Inicializa com dentes saudáveis e sem ID se não houver dados
-        setOdontogramId(undefined);
-        setOdontogramState(marksToState([]));
-      }
-    }
-  }, [data, setOdontogramId, setOdontogramState]);
-
-  // Mutação para salvar dados no backend
-  const { isPending: isSaving, mutate: saveMutate } = useMutation({
-    mutationFn: async (marks: OdontogramMark[]) => {
-      const response = await fetch(`/api/patients/${patientId}/odontogram`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          marks,
-          odontogramId,
-        }),
-      });
-      if (!response.ok) throw new Error("Falha ao salvar odontograma");
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast.success("Odontograma salvo com sucesso!");
-      setOdontogramId(data.odontogramId);
-      queryClient.invalidateQueries({ queryKey: ["odontogram", patientId] }); // Invalida cache
-    },
-    onError: (error) => {
-      console.error("Save Odontogram Error:", error);
-      toast.error("Erro ao salvar odontograma.");
-    },
-  });
-
-  const saveOdontogram = React.useCallback(() => {
-    const marksToSave = stateToMarks(odontogramState);
-    saveMutate(marksToSave);
-  }, [odontogramState, saveMutate]);
-
-  const selectTooth = React.useCallback(
-    (toothNumber: ToothNumber, face: ToothFace) => {
-      setSelectedTooth(toothNumber);
-      setSelectedFace(face);
-    },
-    [],
-  );
-
-  const closeModal = React.useCallback(() => {
-    setSelectedTooth(null);
-    setSelectedFace(null);
-  }, []);
-
-  const visualOdontogram = React.useMemo(
-    () => stateToVisual(odontogramState),
-    [odontogramState],
-  );
-
-  const contextValue = React.useMemo(
-    () => ({
-      patientId,
-      odontogramId,
-      odontogramState,
-      visualOdontogram,
-      selectedTooth,
-      selectedFace,
-      isModalOpen,
-      setOdontogramState,
-      selectTooth,
-      closeModal,
-      isLoading,
-      isSaving,
-      saveOdontogram,
-    }),
-    [
-      patientId,
-      odontogramId,
-      odontogramState,
-      visualOdontogram,
-      selectedTooth,
-      selectedFace,
-      isModalOpen,
-      selectTooth,
-      closeModal,
-      isLoading,
-      isSaving,
-      saveOdontogram,
-    ],
-  );
-
-  if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+  // A lista de médicos precisa ter pelo menos um item para o Select funcionar corretamente.
+  const hasDoctors = doctors && doctors.length > 0;
 
   return (
-    <OdontogramContext.Provider value={contextValue}>
-      {children}
-      <ToothModal />
-    </OdontogramContext.Provider>
+    <Card className="w-full">
+      <CardHeader>
+        <div className="flex w-full justify-between">
+          <CardTitle>Arcada Dentária Permanente</CardTitle>
+          <Button
+            onClick={saveNewOdontogramRecord}
+            disabled={isSaving || !hasDoctors}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {isSaving ? "Salvando..." : "Salvar Novo Registro"}
+          </Button>
+        </div>
+        {/* NOVOS CAMPOS: Médico e Data do Registro */}
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+          {/* Seleção do Médico */}
+          <Select
+            value={currentDoctorId}
+            onValueChange={(value) => setCurrentDoctorId(value)}
+            disabled={!hasDoctors || isSaving}
+          >
+            <SelectTrigger className="w-full sm:w-[250px]">
+              <SelectValue placeholder="Selecione o Médico" />
+            </SelectTrigger>
+            <SelectContent>
+              {doctors.map((doctor) => (
+                <SelectItem key={doctor.id} value={doctor.id}>
+                  {doctor.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Seleção da Data */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal sm:w-[200px]",
+                  !currentDate && "text-muted-foreground",
+                )}
+                disabled={isSaving}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {currentDate ? (
+                  format(currentDate, "PPP", { locale: ptBR })
+                ) : (
+                  <span>Selecione a data</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                captionLayout="dropdown-buttons"
+                selected={currentDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setCurrentDate(date);
+                  }
+                }}
+                // Permite datas no futuro (para agendar um registro)
+                toYear={new Date().getFullYear() + 1}
+                initialFocus
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col items-center gap-6">
+          {/* Arcada Superior */}
+          <div className="flex justify-center gap-4">
+            {/* Superior Direito (18 a 11) */}
+            <Quadrant
+              quadrant={PERMANENT_TEETH_FDI.quadrant1}
+              isUpper={QUADRANT_IS_UPPER.quadrant1}
+            />
+            {/* Superior Esquerdo (21 a 28) */}
+            <Quadrant
+              quadrant={PERMANENT_TEETH_FDI.quadrant2}
+              isUpper={QUADRANT_IS_UPPER.quadrant2}
+            />
+          </div>
+
+          <Separator className="w-full" />
+
+          {/* Arcada Inferior */}
+          <div className="flex justify-center gap-4">
+            {/* Inferior Direito (41 a 48) */}
+            <Quadrant
+              quadrant={PERMANENT_TEETH_FDI.quadrant4}
+              isUpper={QUADRANT_IS_UPPER.quadrant4}
+            />
+            {/* Inferior Esquerdo (31 a 38) */}
+            <Quadrant
+              quadrant={PERMANENT_TEETH_FDI.quadrant3}
+              isUpper={QUADRANT_IS_UPPER.quadrant3}
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
-// ... (Restante do arquivo permanece inalterado)
+export default function OdontogramCanvas(props: OdontogramCanvasBaseProps) {
+  return (
+    <OdontogramProvider patientId={props.patientId} doctors={props.doctors}>
+      <OdontogramCanvasBase />
+    </OdontogramProvider>
+  );
+}

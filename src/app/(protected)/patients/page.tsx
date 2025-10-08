@@ -1,10 +1,10 @@
+// src/app/(protected)/patients/[id]/odontogram/page.tsx
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import * as React from "react";
 
-import { DataTable } from "@/components/ui/data-table";
 import {
-  PageActions,
   PageContainer,
   PageContent,
   PageDescription,
@@ -13,16 +13,16 @@ import {
   PageTitle,
 } from "@/components/ui/page-container";
 import { db } from "@/db";
-import { patientsTable } from "@/db/schema";
+import { doctorsTable, patientsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
-import AddPatientButton from "./_components/add-patient-button";
-import { patientsTableColumns } from "./_components/table-columns";
+import OdontogramCanvas from "./_components/odontogram-canvas";
+import OdontogramHistory from "./_components/odontogram-history"; // Importação do novo componente
 
-const PatientsPage = async () => {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+// Forçando o tipo 'any' na desestruturação das props para contornar o bug de tipagem do Next.js (params como Promise)
+export default async function OdontogramPage({ params, searchParams }: any) {
+  const session = await auth.api.getSession({ headers: await headers() });
+
   if (!session?.user) {
     redirect("/authentication");
   }
@@ -32,27 +32,50 @@ const PatientsPage = async () => {
   if (!session.user.plan) {
     redirect("/new-subscription");
   }
-  const patients = await db.query.patientsTable.findMany({
-    where: eq(patientsTable.clinicId, session.user.clinic.id),
+
+  // Acessando params.id sem o erro de tipagem
+  const patientPromise = db.query.patientsTable.findFirst({
+    where: eq(patientsTable.id, params.id),
   });
+
+  // Busca a lista de médicos da clínica para o formulário
+  const doctorsPromise = db.query.doctorsTable.findMany({
+    where: eq(doctorsTable.clinicId, session.user.clinic.id),
+    columns: {
+      id: true,
+      name: true,
+      specialties: true,
+    },
+  });
+
+  const [patient, doctors] = await Promise.all([
+    patientPromise,
+    doctorsPromise,
+  ]);
+
+  if (!patient || patient.clinicId !== session.user.clinic.id) {
+    notFound();
+  }
+
   return (
     <PageContainer>
       <PageHeader>
         <PageHeaderContent>
-          <PageTitle>Pacientes</PageTitle>
+          <PageTitle>Odontograma de {patient.name}</PageTitle>
           <PageDescription>
-            Gerencie os pacientes da sua clínica
+            Visualize e registre as marcações dentárias do paciente.
           </PageDescription>
         </PageHeaderContent>
-        <PageActions>
-          <AddPatientButton />
-        </PageActions>
       </PageHeader>
       <PageContent>
-        <DataTable data={patients} columns={patientsTableColumns} />
+        {/* Layout em 2 colunas para exibir o canvas e o histórico */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
+          {/* Odontograma Principal */}
+          <OdontogramCanvas patientId={params.id} doctors={doctors} />
+          {/* Histórico/Listagem de Registros */}
+          <OdontogramHistory patientId={params.id} doctors={doctors} />
+        </div>
       </PageContent>
     </PageContainer>
   );
-};
-
-export default PatientsPage;
+}

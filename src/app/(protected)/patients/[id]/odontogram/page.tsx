@@ -13,10 +13,11 @@ import {
   PageTitle,
 } from "@/components/ui/page-container";
 import { db } from "@/db";
-import { patientsTable } from "@/db/schema";
+import { doctorsTable, patientsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 import OdontogramCanvas from "./_components/odontogram-canvas";
+import OdontogramHistory from "./_components/odontogram-history"; // Importação do novo componente
 
 // Forçando o tipo 'any' na desestruturação das props para contornar o bug de tipagem do Next.js (params como Promise)
 export default async function OdontogramPage({ params, searchParams }: any) {
@@ -33,9 +34,24 @@ export default async function OdontogramPage({ params, searchParams }: any) {
   }
 
   // Acessando params.id sem o erro de tipagem
-  const patient = await db.query.patientsTable.findFirst({
+  const patientPromise = db.query.patientsTable.findFirst({
     where: eq(patientsTable.id, params.id),
   });
+
+  // Busca a lista de médicos da clínica para o formulário
+  const doctorsPromise = db.query.doctorsTable.findMany({
+    where: eq(doctorsTable.clinicId, session.user.clinic.id),
+    columns: {
+      id: true,
+      name: true,
+      specialties: true,
+    },
+  });
+
+  const [patient, doctors] = await Promise.all([
+    patientPromise,
+    doctorsPromise,
+  ]);
 
   if (!patient || patient.clinicId !== session.user.clinic.id) {
     notFound();
@@ -52,7 +68,13 @@ export default async function OdontogramPage({ params, searchParams }: any) {
         </PageHeaderContent>
       </PageHeader>
       <PageContent>
-        <OdontogramCanvas patientId={params.id} />
+        {/* Layout em 2 colunas para exibir o canvas e o histórico */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
+          {/* Odontograma Principal */}
+          <OdontogramCanvas patientId={params.id} doctors={doctors} />
+          {/* Histórico/Listagem de Registros */}
+          <OdontogramHistory patientId={params.id} doctors={doctors} />
+        </div>
       </PageContent>
     </PageContainer>
   );

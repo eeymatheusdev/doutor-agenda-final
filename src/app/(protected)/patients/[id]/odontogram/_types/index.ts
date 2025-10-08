@@ -1,5 +1,9 @@
 // src/app/(protected)/patients/[id]/odontogram/_types/index.ts
-import { odontogramMarksTable, odontogramsTable } from "@/db/schema";
+import {
+  doctorsTable,
+  odontogramMarksTable,
+  odontogramsTable,
+} from "@/db/schema";
 
 import { OdontogramStatus, ToothFace, ToothNumber } from "../_constants";
 
@@ -7,10 +11,18 @@ import { OdontogramStatus, ToothFace, ToothNumber } from "../_constants";
 export type { OdontogramStatus, ToothFace, ToothNumber };
 // ---------------------------------------------------------------------------------
 
-export type Odontogram = typeof odontogramsTable.$inferSelect & {
+// Tipo base do registro de odontograma
+type OdontogramBase = typeof odontogramsTable.$inferSelect;
+
+// Tipo de marcação no banco de dados
+export type OdontogramMarkDb = typeof odontogramMarksTable.$inferSelect;
+
+// Tipo que inclui o odontograma e as marcas
+// RENOMEADO: Agora representa um registro completo (uma versão)
+export type OdontogramRecord = OdontogramBase & {
+  doctor: Pick<typeof doctorsTable.$inferSelect, "id" | "name">; // Adicionado
   marks: OdontogramMarkDb[];
 };
-export type OdontogramMarkDb = typeof odontogramMarksTable.$inferSelect;
 
 // Tipo de Marcação no Frontend (simplificado)
 export interface OdontogramMark {

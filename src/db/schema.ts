@@ -109,6 +109,7 @@ export const clinicsTableRelations = relations(clinicsTable, ({ many }) => ({
   patients: many(patientsTable),
   appointments: many(appointmentsTable),
   usersToClinics: many(usersToClinicsTable),
+  odontograms: many(odontogramsTable), // Adicionado para a relação
 }));
 
 // NOVO: Enum para Faces do Dente
@@ -251,6 +252,7 @@ export const doctorsTableRelations = relations(
       references: [clinicsTable.id],
     }),
     appointments: many(appointmentsTable),
+    odontograms: many(odontogramsTable), // NOVA RELAÇÃO
   }),
 );
 
@@ -301,6 +303,12 @@ export const odontogramsTable = pgTable("odontograms", {
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date()),
+  // NOVOS CAMPOS OBRIGATÓRIOS:
+  doctorId: uuid("doctor_id")
+    .notNull()
+    .references(() => doctorsTable.id, { onDelete: "restrict" }),
+  date: date("date").notNull(), // Data do registro
+  // FIM NOVOS CAMPOS OBRIGATÓRIOS
 });
 
 export const odontogramsTableRelations = relations(
@@ -313,6 +321,11 @@ export const odontogramsTableRelations = relations(
     clinic: one(clinicsTable, {
       fields: [odontogramsTable.clinicId],
       references: [clinicsTable.id],
+    }),
+    doctor: one(doctorsTable, {
+      // NOVA RELAÇÃO
+      fields: [odontogramsTable.doctorId],
+      references: [doctorsTable.id],
     }),
     marks: many(odontogramMarksTable),
   }),
