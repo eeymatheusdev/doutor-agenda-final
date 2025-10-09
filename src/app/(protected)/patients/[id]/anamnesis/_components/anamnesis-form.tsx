@@ -1,3 +1,4 @@
+// src/app/(protected)/patients/[id]/anamnesis/_components/anamnesis-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +17,13 @@ import {
 import * as React from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 
-import { AnamnesisSchema, anamnesisSchema } from "@/actions/anamnesis/schema";
+// FIX: Importar PainCharacteristics e KnownConditions do schema
+import {
+  AnamnesisSchema,
+  anamnesisSchema,
+  KnownConditions,
+  PainCharacteristics,
+} from "@/actions/anamnesis/schema";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,34 +57,12 @@ import { cn } from "@/lib/utils";
 interface AnamnesisFormProps {
   initialData: AnamnesisSchema;
   currentRecordId: string | undefined;
-  onSaveDraft: (data: AnamnesisSchema) => Promise<void>;
+  // ATUALIZADO: Inclui o ID/undefined para o Server Action decidir se é UPDATE ou INSERT
+  onSaveDraft: (data: AnamnesisSchema, id: string | undefined) => Promise<void>;
   onSaveNewVersion: (data: AnamnesisSchema) => Promise<void>;
   isSaving: boolean;
   patientId: string;
 }
-
-const PainCharacteristics = [
-  "agudo",
-  "cronico",
-  "latejante",
-  "constante",
-  "intermitente",
-];
-const KnownConditions = [
-  "diabetes",
-  "hipertensao",
-  "cardiopatias",
-  "avc",
-  "asma",
-  "doencas_renais",
-  "hepatite",
-  "imunossupressao",
-  "cancer",
-  "disturbios_coagulacao",
-  "hiv",
-  "tireoide",
-  "outras",
-];
 
 const AnamnesisForm = ({
   initialData,
@@ -121,7 +106,6 @@ const AnamnesisForm = ({
     // 1. O schema de upsert precisa de strings para as datas.
     const formattedValues = {
       ...values,
-      id: actionType === "draft" ? currentRecordId : undefined,
       patientId: patientId,
       // Converte Date objects para string "yyyy-MM-dd"
       onsetDate: values.onsetDate
@@ -142,7 +126,7 @@ const AnamnesisForm = ({
     if (actionType === "new") {
       onSaveNewVersion(formattedValues);
     } else {
-      onSaveDraft(formattedValues);
+      onSaveDraft(formattedValues, currentRecordId); // Passa o ID
     }
   };
 
@@ -533,7 +517,7 @@ const AnamnesisForm = ({
               appendAllergy({
                 substance: "",
                 reaction: null,
-                severity: undefined,
+                severity: null, // FIX: Mudado de undefined para null
               })
             }
           >

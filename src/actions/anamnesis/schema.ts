@@ -12,9 +12,13 @@ const medicationSchema = z.object({
 const allergySchema = z.object({
   substance: z.string().trim().min(1, "Substância é obrigatória."),
   reaction: z.string().trim().optional().nullable(),
-  severity: z.enum(["mild", "moderate", "severe"], {
-    required_error: "Selecione a severidade.",
-  }),
+  severity: z
+    .enum(["mild", "moderate", "severe"], {
+      required_error: "Selecione a severidade.",
+      // FIX: Permite que seja null, o que é mais flexível para inicialização.
+    })
+    .optional()
+    .nullable(),
 });
 
 const smokingSchema = z.object({
@@ -30,7 +34,8 @@ const attachmentSchema = z.object({
 });
 
 // Enum values para condições e características da dor
-const PainCharacteristics = [
+export const PainCharacteristics = [
+  // AGORA EXPORTADO
   "agudo",
   "cronico",
   "latejante",
@@ -38,7 +43,8 @@ const PainCharacteristics = [
   "intermitente",
 ] as const;
 
-const KnownConditions = [
+export const KnownConditions = [
+  // AGORA EXPORTADO
   "diabetes",
   "hipertensao",
   "cardiopatias",

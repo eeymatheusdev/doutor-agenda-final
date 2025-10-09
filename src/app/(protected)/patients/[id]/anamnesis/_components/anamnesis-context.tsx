@@ -1,3 +1,4 @@
+// src/app/(protected)/patients/[id]/anamnesis/_components/anamnesis-context.tsx
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
@@ -8,48 +9,10 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { AnamnesisSchema, anamnesisSchema } from "@/actions/anamnesis/schema";
-import {
-  getAnamnesesByPatient,
-  upsertAnamnesis,
-} from "@/actions/anamnesis/upsert-anamnesis";
 import { AnamnesisRecord } from "@/actions/anamnesis/upsert-anamnesis";
 import { authClient } from "@/lib/auth-client";
 
-// --- Definição do Contexto ---
-
-interface AnamnesisContextProps {
-  // Estado
-  currentAnamnesisData: AnamnesisSchema;
-  currentAnamnesisId: string | undefined;
-  currentAnamnesisVersion: number;
-  allAnamnesisRecords: AnamnesisRecord[] | undefined;
-  isLoadingHistory: boolean;
-  isSaving: boolean;
-
-  // Dados obrigatórios
-  patientId: string;
-  userId: string;
-
-  // Ações
-  loadRecordToCanvas: (record: AnamnesisRecord) => void;
-  resetToNewAnamnesis: () => void;
-  setFormData: React.Dispatch<React.SetStateAction<AnamnesisSchema>>;
-  saveDraft: (data: AnamnesisSchema) => Promise<void>;
-  saveNewVersion: (data: AnamnesisSchema) => Promise<void>;
-}
-
-const AnamnesisContext = React.createContext<AnamnesisContextProps | undefined>(
-  undefined,
-);
-
-export const useAnamnesis = () => {
-  const context = React.useContext(AnamnesisContext);
-  if (!context) {
-    throw new Error("useAnamnesis must be used within an AnamnesisProvider");
-  }
-  return context;
-};
-
+// Helper to get initial data
 const getInitialAnamnesisData = (patientId: string): AnamnesisSchema => ({
   patientId,
   // Valores iniciais para listas e objetos complexos (coerção para Zod)
@@ -76,12 +39,110 @@ const getInitialAnamnesisData = (patientId: string): AnamnesisSchema => ({
   consentSigned: false,
 });
 
+// Helper para converter record DB para o formato do formulário com datas como Date
+const recordToFormData = (record: AnamnesisRecord): AnamnesisSchema => {
+  const data = record.data;
+  // A validação de parse já trata a estrutura
+  return anamnesisSchema.parse({
+    id: record.id,
+    patientId: record.patientId,
+    ...data,
+    attachments: data.attachments || [],
+    knownConditions: data.knownConditions || [],
+    painCharacteristics: data.painCharacteristics || [],
+    currentMedications: data.currentMedications || [],
+    allergies: data.allergies || [],
+    smoking: data.smoking || {
+      isSmoker: false,
+      packPerDay: null,
+      years: null,
+    },
+    // Coerção de booleanos e conversão de strings de data para objetos Date
+    pregnancy: !!data.pregnancy,
+    breastfeeding: !!data.breastfeeding,
+    bleedingProblems: !!data.bleedingProblems,
+    anesthesiaComplicationsHistory: !!data.anesthesiaComplicationsHistory,
+    drugUse: !!data.drugUse,
+    bruxism: !!data.bruxism,
+    oralHygieneMouthwashUse: !!data.oralHygieneMouthwashUse,
+    anesthesiaAllergies: !!data.anesthesiaAllergies,
+    sensitivityToColdHot: !!data.sensitivityToColdHot,
+    tmjSymptoms: !!data.tmjSymptoms,
+    consentSigned: !!data.consentSigned,
+
+    onsetDate: data.onsetDate ? new Date(data.onsetDate as string) : null,
+    lastDentalVisit: data.lastDentalVisit
+      ? new Date(data.lastDentalVisit as string)
+      : null,
+    consentDate: data.consentDate ? new Date(data.consentDate as string) : null,
+    followUpDate: data.followUpDate
+      ? new Date(data.followUpDate as string)
+      : null,
+  }) as AnamnesisSchema;
+};
+
+// --- Definição do Contexto ---
+
+interface AnamnesisContextProps {
+  // Estado
+  currentAnamnesisData: AnamnesisSchema;
+  currentAnamnesisId: string | undefined;
+  currentAnamnesisVersion: number;
+  allAnamnesisRecords: AnamnesisRecord[] | undefined;
+  isLoadingHistory: boolean;
+
+  // Dados obrigatórios
+  patientId: string;
+
+  // Ações de Estado/Carregamento
+  loadRecordToCanvas: (
+    record: AnamnesisRecord,
+    options?: { silent: boolean },
+  ) => void;
+  resetToNewAnamnesis: () => void;
+  setFormData: React.Dispatch<React.SetStateAction<AnamnesisSchema>>;
+
+  // Injeção de Propriedades de Mutação (vêm do CanvasBase)
+  saveDraft: (data: AnamnesisSchema, id: string | undefined) => Promise<void>;
+  saveNewVersion: (data: AnamnesisSchema) => Promise<void>;
+  isSaving: boolean;
+
+  // FIX: Adiciona a função de refetch ao contexto
+  refetchHistory: () => void;
+}
+
+const AnamnesisContext = React.createContext<AnamnesisContextProps | undefined>(
+  undefined,
+);
+
+export const useAnamnesis = () => {
+  const context = React.useContext(AnamnesisContext);
+  if (!context) {
+    throw new Error("useAnamnesis must be used within an AnamnesisProvider");
+  }
+  return context;
+};
+
+// --- Componente Provider ---
+
+interface AnamnesisProviderProps {
+  patientId: string;
+  // Recebe as funções de mutação e status do CanvasBase
+  saveDraft: (data: AnamnesisSchema, id: string | undefined) => Promise<void>;
+  saveNewVersion: (data: AnamnesisSchema) => Promise<void>;
+  isSaving: boolean;
+  // FIX: Removido refetchHistory para corrigir o erro de tipagem no componente pai
+  children: React.ReactNode;
+}
+
 export function AnamnesisProvider({
   patientId,
+  saveDraft,
+  saveNewVersion,
+  isSaving,
   children,
 }: AnamnesisProviderProps) {
   const { data: session } = authClient.useSession();
-  const userId = session?.user.id || "";
 
   const [currentAnamnesisData, setCurrentAnamnesisData] =
     React.useState<AnamnesisSchema>(getInitialAnamnesisData(patientId));
@@ -91,65 +152,28 @@ export function AnamnesisProvider({
   >(undefined);
   const [currentAnamnesisVersion, setCurrentAnamnesisVersion] =
     React.useState(1);
-  const [isSaving, setIsSaving] = React.useState(false);
 
   // --- Busca de Histórico ---
   const {
     data: allAnamnesisRecords,
     isLoading: isLoadingHistory,
-    refetch: refetchHistory,
+    refetch: refetchHistory, // FIX: Obtém o refetch do useQuery
   } = useQuery<AnamnesisRecord[]>({
     queryKey: ["anamnesis-history", patientId],
-    queryFn: () =>
-      getAnamnesesByPatient({ patientId: patientId }).then((res) => res.data),
+    queryFn: async () => {
+      const res = await fetch(`/api/patients/${patientId}/anamnesis`);
+      if (!res.ok) throw new Error("Failed to fetch anamnesis history");
+      return res.json() as Promise<AnamnesisRecord[]>;
+    },
     enabled: !!session?.user?.clinic?.id && !!patientId,
   });
-
-  // Carrega o registro mais recente (rascunho ou versão mais alta) na inicialização
-  React.useEffect(() => {
-    if (allAnamnesisRecords && allAnamnesisRecords.length > 0) {
-      loadRecordToCanvas(allAnamnesisRecords[0], { silent: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allAnamnesisRecords?.length, patientId]);
-
-  // --- Ações ---
 
   const loadRecordToCanvas = React.useCallback(
     (record: AnamnesisRecord, { silent = false } = {}) => {
       try {
-        // Mescla o JSONB 'data' com o tipo AnamnesisSchema e define campos de controle
-        const loadedData = anamnesisSchema.parse({
-          id: record.id,
-          patientId: record.patientId,
-          ...record.data,
-          attachments: record.attachments || [],
-          // Garante que campos opcionais ausentes no JSONB voltem a ser arrays vazios/objetos padrão
-          knownConditions: record.data.knownConditions || [],
-          painCharacteristics: record.data.painCharacteristics || [],
-          currentMedications: record.data.currentMedications || [],
-          allergies: record.data.allergies || [],
-          smoking: record.data.smoking || {
-            isSmoker: false,
-            packPerDay: null,
-            years: null,
-          },
-          // Converte strings de data para objetos Date para o formulário
-          onsetDate: record.data.onsetDate
-            ? new Date(record.data.onsetDate)
-            : null,
-          lastDentalVisit: record.data.lastDentalVisit
-            ? new Date(record.data.lastDentalVisit)
-            : null,
-          consentDate: record.data.consentDate
-            ? new Date(record.data.consentDate)
-            : null,
-          followUpDate: record.data.followUpDate
-            ? new Date(record.data.followUpDate)
-            : null,
-        });
+        const loadedData = recordToFormData(record);
 
-        setCurrentAnamnesisData(loadedData as any);
+        setCurrentAnamnesisData(loadedData);
         setCurrentAnamnesisId(record.id);
         setCurrentAnamnesisVersion(record.version);
 
@@ -166,102 +190,20 @@ export function AnamnesisProvider({
     [],
   );
 
+  // Carrega o registro mais recente na inicialização/após refetch
+  React.useEffect(() => {
+    if (allAnamnesisRecords && allAnamnesisRecords.length > 0) {
+      loadRecordToCanvas(allAnamnesisRecords[0], { silent: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allAnamnesisRecords?.length, patientId]);
+
   const resetToNewAnamnesis = React.useCallback(() => {
     setCurrentAnamnesisData(getInitialAnamnesisData(patientId));
     setCurrentAnamnesisId(undefined); // Novo registro
     setCurrentAnamnesisVersion((allAnamnesisRecords?.[0]?.version || 0) + 1);
     toast.info("Iniciando nova ficha clínica.");
   }, [patientId, allAnamnesisRecords]);
-
-  const saveDraft = React.useCallback(
-    async (data: AnamnesisSchema) => {
-      setIsSaving(true);
-      try {
-        const formattedData = {
-          ...data,
-          // Coerce Date objects to string for the server action
-          onsetDate: data.onsetDate
-            ? format(data.onsetDate, "yyyy-MM-dd")
-            : null,
-          lastDentalVisit: data.lastDentalVisit
-            ? format(data.lastDentalVisit, "yyyy-MM-dd")
-            : null,
-          consentDate: data.consentDate
-            ? format(data.consentDate, "yyyy-MM-dd")
-            : null,
-          followUpDate: data.followUpDate
-            ? format(data.followUpDate, "yyyy-MM-dd")
-            : null,
-        };
-
-        const result = await upsertAnamnesis({
-          ...formattedData,
-          id: currentAnamnesisId,
-          patientId: data.patientId,
-        });
-
-        if (result.serverError) {
-          throw new Error(result.serverError);
-        }
-
-        toast.success(
-          `Rascunho da versão ${currentAnamnesisVersion} salvo com sucesso!`,
-        );
-        refetchHistory();
-      } catch (error) {
-        console.error("Save Draft Error:", error);
-        toast.error("Erro ao salvar rascunho da anamnese.");
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [currentAnamnesisId, currentAnamnesisVersion, refetchHistory],
-  );
-
-  const saveNewVersion = React.useCallback(
-    async (data: AnamnesisSchema) => {
-      setIsSaving(true);
-      try {
-        const formattedData = {
-          ...data,
-          // Coerce Date objects to string for the server action
-          onsetDate: data.onsetDate
-            ? format(data.onsetDate, "yyyy-MM-dd")
-            : null,
-          lastDentalVisit: data.lastDentalVisit
-            ? format(data.lastDentalVisit, "yyyy-MM-dd")
-            : null,
-          consentDate: data.consentDate
-            ? format(data.consentDate, "yyyy-MM-dd")
-            : null,
-          followUpDate: data.followUpDate
-            ? format(data.followUpDate, "yyyy-MM-dd")
-            : null,
-        };
-
-        // Salva como nova versão (sem passar ID, forçando INSERT)
-        const result = await upsertAnamnesis({
-          ...formattedData,
-          id: undefined,
-          patientId: data.patientId,
-        });
-
-        if (result.serverError) {
-          throw new Error(result.serverError);
-        }
-
-        toast.success("Nova versão da anamnese criada com sucesso!");
-        refetchHistory();
-        // O useEffect recarrega o registro mais recente (a nova versão)
-      } catch (error) {
-        console.error("Save New Version Error:", error);
-        toast.error("Erro ao criar nova versão da anamnese.");
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [refetchHistory],
-  );
 
   const setFormData = setCurrentAnamnesisData;
 
@@ -274,12 +216,12 @@ export function AnamnesisProvider({
       isLoadingHistory,
       isSaving,
       patientId,
-      userId,
       loadRecordToCanvas,
       resetToNewAnamnesis,
       setFormData,
       saveDraft,
       saveNewVersion,
+      refetchHistory: () => refetchHistory(), // FIX: Função real do useQuery
     }),
     [
       currentAnamnesisData,
@@ -289,12 +231,12 @@ export function AnamnesisProvider({
       isLoadingHistory,
       isSaving,
       patientId,
-      userId,
       loadRecordToCanvas,
       resetToNewAnamnesis,
       setFormData,
       saveDraft,
       saveNewVersion,
+      refetchHistory,
     ],
   );
 
