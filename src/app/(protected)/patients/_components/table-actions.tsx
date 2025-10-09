@@ -1,11 +1,13 @@
+// src/app/(protected)/patients/_components/table-actions.tsx
 import {
   ClipboardList,
   Component,
+  DollarSign, // NOVO ÍCONE
   EditIcon,
   MoreVerticalIcon,
   TrashIcon,
-} from "lucide-react"; // Adicionando ClipboardList
-import Link from "next/link"; // Importando Link
+} from "lucide-react";
+import Link from "next/link";
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -61,7 +63,11 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
     <>
       <Dialog open={upsertDialogIsOpen} onOpenChange={setUpsertDialogIsOpen}>
         <DropdownMenu>
-          {/* ... DropdownMenuTrigger */}
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVerticalIcon className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuLabel>{patient.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -69,7 +75,6 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
               <EditIcon />
               Editar
             </DropdownMenuItem>
-            {/* ITEM: Link para Odontograma */}
             <DropdownMenuItem asChild>
               <Link
                 href={`/patients/${patient.id}/odontogram`}
@@ -79,7 +84,6 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
                 Odontograma
               </Link>
             </DropdownMenuItem>
-            {/* NOVO ITEM: Link para Anamnese */}
             <DropdownMenuItem asChild>
               <Link
                 href={`/patients/${patient.id}/anamnesis`}
@@ -89,7 +93,16 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
                 Anamnese
               </Link>
             </DropdownMenuItem>
-            {/* FIM NOVO ITEM */}
+            {/* NOVO ITEM DE MENU */}
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/patients/${patient.id}/financials`}
+                className="gap-2"
+              >
+                <DollarSign className="h-4 w-4" />
+                Financeiro
+              </Link>
+            </DropdownMenuItem>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <DropdownMenuItem
@@ -100,7 +113,23 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
                   Excluir
                 </DropdownMenuItem>
               </AlertDialogTrigger>
-              {/* ... AlertDialogContent */}
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Tem certeza que deseja deletar esse paciente?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Essa ação não pode ser revertida. Isso irá deletar o
+                    paciente e todos os seus dados associados permanentemente.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeletePatientClick}>
+                    Deletar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
             </AlertDialog>
           </DropdownMenuContent>
         </DropdownMenu>

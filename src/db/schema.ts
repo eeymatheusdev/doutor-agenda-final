@@ -3,14 +3,16 @@ import {
   boolean,
   date,
   integer,
-  jsonb, // Adicionado para objetos JSON
+  jsonb,
+  numeric, // Adicionado para valores monetários
   pgEnum,
   pgTable,
+  serial, // Adicionado para IDs auto-incrementais
   text,
   time,
   timestamp,
   uuid,
-  varchar, // Adicionado para tipos com comprimento
+  varchar,
 } from "drizzle-orm/pg-core";
 
 // NOVO: Enum para Status de Anamnese
@@ -119,6 +121,21 @@ export const verificationsTable = pgTable("verifications", {
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
+
+// NOVO: Enum para Status Financeiro do Paciente
+export const patientFinancialStatusEnum = pgEnum("patient_financial_status", [
+  "adimplente",
+  "inadimplente",
+]);
+
+// NOVO: Enum para Tipo de Transação Financeira
+export const financialTransactionTypeEnum = pgEnum(
+  "financial_transaction_type",
+  ["charge", "payment"],
+);
+
+// NOVO: Enum para Status da Cobrança
+export const chargeStatusEnum = pgEnum("charge_status", ["pending", "paid"]);
 
 // NOVO: Enum para Faces do Dente
 export const toothFaceEnum = pgEnum("tooth_face", [
@@ -365,6 +382,29 @@ export const patientsTable = pgTable("patients", {
   responsibleCpf: text("responsible_cpf"),
   responsibleRg: text("responsible_rg"),
   responsiblePhoneNumber: text("responsible_phone_number"),
+  financialStatus: patientFinancialStatusEnum("financial_status")
+    .notNull()
+    .default("adimplente"),
+});
+
+export const patientFinancesTable = pgTable("patient_finances", {
+  id: serial("id").primaryKey(),
+  patientId: uuid("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  type: financialTransactionTypeEnum("type").notNull(), // 'charge' ou 'payment'
+  amountInCents: integer("amount_in_cents").notNull(),
+  description: text("description"),
+  method: text("method"),
+  dueDate: date("due_date"),
+  status: chargeStatusEnum("status"), // Apenas para cobranças
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 // NOVO: Tabela para Odontogramas (Representa uma versão/visita)
@@ -448,6 +488,21 @@ export const patientsTableRelations = relations(
     appointments: many(appointmentsTable),
     odontograms: many(odontogramsTable),
     anamneses: many(anamnesesTable), // NOVA RELAÇÃO
+    finances: many(patientFinancesTable), // NOVA RELAÇÃO
+  }),
+);
+
+export const patientFinancesTableRelations = relations(
+  patientFinancesTable,
+  ({ one }) => ({
+    patient: one(patientsTable, {
+      fields: [patientFinancesTable.patientId],
+      references: [patientsTable.id],
+    }),
+    clinic: one(clinicsTable, {
+      fields: [patientFinancesTable.clinicId],
+      references: [clinicsTable.id],
+    }),
   }),
 );
 
