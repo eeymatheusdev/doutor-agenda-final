@@ -1,3 +1,4 @@
+// src/app/(protected)/dashboard/page.tsx
 import dayjs from "dayjs";
 import { Calendar } from "lucide-react";
 import { headers } from "next/headers";
@@ -25,10 +26,10 @@ import TopDoctors from "./_components/top-doctors";
 import TopSpecialties from "./_components/top-specialties";
 
 interface DashboardPageProps {
-  searchParams: Promise<{
+  searchParams: {
     from: string;
     to: string;
-  }>;
+  };
 }
 
 const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
@@ -44,7 +45,8 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
   if (!session.user.plan) {
     redirect("/new-subscription");
   }
-  const { from, to } = await searchParams;
+  const { from, to } = searchParams; // <-- CORRIGIDO: Removido 'await'
+
   if (!from || !to) {
     redirect(
       `/dashboard?from=${dayjs().format("YYYY-MM-DD")}&to=${dayjs().add(1, "month").format("YYYY-MM-DD")}`,

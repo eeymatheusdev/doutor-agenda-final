@@ -3,9 +3,12 @@ import { z } from "zod";
 
 import { getAnamnesesByPatient } from "@/actions/anamnesis/upsert-anamnesis";
 
-export async function GET(request: Request, context: any) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
   try {
-    const patientId = context.params.id;
+    const patientId = params.id;
 
     const validation = z.string().uuid().safeParse(patientId);
 

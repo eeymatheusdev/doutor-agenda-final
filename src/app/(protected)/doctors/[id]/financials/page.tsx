@@ -18,7 +18,11 @@ import { auth } from "@/lib/auth";
 
 import FinancialDashboard from "./_components/financial-dashboard";
 
-export default async function DoctorFinancialsPage({ params }: any) {
+export default async function DoctorFinancialsPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {

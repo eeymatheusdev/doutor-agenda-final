@@ -18,7 +18,11 @@ import { auth } from "@/lib/auth";
 
 import FinancialDashboard from "./_components/financial-dashboard";
 
-export default async function PatientFinancialsPage({ params }: any) {
+export default async function PatientFinancialsPage({
+  params,
+}: {
+  params: { patientId: string };
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {
@@ -33,7 +37,7 @@ export default async function PatientFinancialsPage({ params }: any) {
 
   const patient = await db.query.patientsTable.findFirst({
     where: and(
-      eq(patientsTable.id, params.id),
+      eq(patientsTable.id, params.patientId),
       eq(patientsTable.clinicId, session.user.clinic.id),
     ),
   });
@@ -42,7 +46,9 @@ export default async function PatientFinancialsPage({ params }: any) {
     notFound();
   }
 
-  const initialFinances = await getPatientFinances({ patientId: params.id });
+  const initialFinances = await getPatientFinances({
+    patientId: params.patientId,
+  });
 
   return (
     <PageContainer>
