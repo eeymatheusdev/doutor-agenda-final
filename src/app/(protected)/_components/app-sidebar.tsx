@@ -1,3 +1,5 @@
+// eeymatheusdev/doutor-agenda-final/doutor-agenda-final-c7f670c00b38f056215f1fa2b1f490cb43ea870a/src/app/(protected)/_components/app-sidebar.tsx
+
 "use client";
 
 import {
@@ -5,6 +7,7 @@ import {
   Gem,
   LayoutDashboard,
   LogOut,
+  Settings, // Importa Settings para uso futuro/direto
   Stethoscope,
   UsersRound,
 } from "lucide-react";
@@ -13,6 +16,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { EditClinicDialog } from "@/components/ui/clinic/edit-clinic-dialog"; // NOVO IMPORT
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +38,7 @@ import {
 import { authClient } from "@/lib/auth-client";
 
 const items = [
+  // ... itens existentes
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -62,6 +67,7 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   const handleSignOut = async () => {
+    // ... lógica de logout
     await authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
@@ -77,6 +83,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
+          // ... grupos de menu existentes
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -113,33 +120,53 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg">
-                  <Avatar>
-                    <AvatarFallback>F</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm">
-                      {session.data?.user?.clinic?.name}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      {session.data?.user.email}
-                    </p>
-                  </div>
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut />
-                  Sair
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="flex w-full items-center justify-between">
+          {/* Menu de Usuário/Clínica */}
+          <SidebarMenu className="flex-1">
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton size="lg" className="flex-1">
+                    {" "}
+                    {/* Adicionado flex-1 */}
+                    <Avatar>
+                      <AvatarFallback>
+                        {session.data?.user.name
+                          ? session.data.user.name[0]
+                          : "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="overflow-hidden text-left">
+                      {" "}
+                      {/* Adicionado overflow-hidden */}
+                      <p className="truncate text-sm">
+                        {session.data?.user?.clinic?.name || "Sem Clínica"}
+                      </p>
+                      <p className="text-muted-foreground truncate text-sm">
+                        {session.data?.user.email}
+                      </p>
+                    </div>
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+
+          {/* Botão de Edição da Clínica */}
+          {session.data?.user?.clinic?.id && (
+            <div className="flex h-12 items-center justify-center pl-2">
+              {" "}
+              {/* Container para alinhar com o botão da sidebar */}
+              <EditClinicDialog />
+            </div>
+          )}
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

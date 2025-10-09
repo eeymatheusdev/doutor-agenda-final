@@ -3,12 +3,14 @@ import {
   boolean,
   date,
   integer,
+  jsonb, // Adicionado para objetos JSON
   pgEnum,
   pgTable,
   text,
   time,
   timestamp,
   uuid,
+  varchar, // Adicionado para tipos com comprimento
 } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
@@ -67,50 +69,6 @@ export const verificationsTable = pgTable("verifications", {
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
-
-export const clinicsTable = pgTable("clinics", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
-
-export const usersToClinicsTable = pgTable("users_to_clinics", {
-  userId: text("user_id")
-    .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
-  clinicId: uuid("clinic_id")
-    .notNull()
-    .references(() => clinicsTable.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
-
-export const usersToClinicsTableRelations = relations(
-  usersToClinicsTable,
-  ({ one }) => ({
-    user: one(usersTable, {
-      fields: [usersToClinicsTable.userId],
-      references: [usersTable.id],
-    }),
-    clinic: one(clinicsTable, {
-      fields: [usersToClinicsTable.clinicId],
-      references: [clinicsTable.id],
-    }),
-  }),
-);
-
-export const clinicsTableRelations = relations(clinicsTable, ({ many }) => ({
-  doctors: many(doctorsTable),
-  patients: many(patientsTable),
-  appointments: many(appointmentsTable),
-  usersToClinics: many(usersToClinicsTable),
-  odontograms: many(odontogramsTable), // Adicionado para a relação
-}));
 
 // NOVO: Enum para Faces do Dente
 export const toothFaceEnum = pgEnum("tooth_face", [
@@ -209,6 +167,77 @@ export const dentalSpecialtyEnum = pgEnum("dental_specialty", [
   "Ortopedia Funcional dos Maxilares",
 ]);
 
+export const patientSexEnum = pgEnum("patient_sex", ["male", "female"]);
+
+export const clinicsTable = pgTable("clinics", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+  // NOVO: Campos de Identificação
+  cnpj: varchar("cnpj", { length: 18 }), // 00.000.000/0000-00
+  inscricaoEstadual: varchar("inscricao_estadual", { length: 30 }),
+  responsibleName: varchar("responsible_name", { length: 100 }),
+  croResponsavel: varchar("cro_responsavel", { length: 20 }),
+  specialties: dentalSpecialtyEnum("specialties").array(),
+
+  // NOVO: Campos de Contato e Localização
+  phone: varchar("phone", { length: 20 }), // (99) 99999-9999
+  email: varchar("email", { length: 150 }),
+  website: varchar("website", { length: 150 }),
+  addressStreet: varchar("address_street", { length: 150 }),
+  addressNumber: varchar("address_number", { length: 10 }),
+  addressComplement: varchar("address_complement", { length: 100 }),
+  addressNeighborhood: varchar("address_neighborhood", { length: 100 }),
+  addressCity: varchar("address_city", { length: 100 }),
+  addressState: brazilianStateEnum("address_state"),
+  addressZipcode: varchar("address_zipcode", { length: 10 }), // 99999-999
+  googleMapsUrl: text("google_maps_url"),
+
+  // NOVO: Informações Administrativas
+  openingHours: jsonb("opening_hours").$type<Record<string, string>>(),
+  paymentMethods: text("payment_methods").array(),
+  logoUrl: text("logo_url"),
+  notes: text("notes"),
+});
+
+export const usersToClinicsTable = pgTable("users_to_clinics", {
+  userId: text("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const usersToClinicsTableRelations = relations(
+  usersToClinicsTable,
+  ({ one }) => ({
+    user: one(usersTable, {
+      fields: [usersToClinicsTable.userId],
+      references: [usersTable.id],
+    }),
+    clinic: one(clinicsTable, {
+      fields: [usersToClinicsTable.clinicId],
+      references: [clinicsTable.id],
+    }),
+  }),
+);
+
+export const clinicsTableRelations = relations(clinicsTable, ({ many }) => ({
+  doctors: many(doctorsTable),
+  patients: many(patientsTable),
+  appointments: many(appointmentsTable),
+  usersToClinics: many(usersToClinicsTable),
+  odontograms: many(odontogramsTable), // Adicionado para a relação
+}));
+
 export const doctorsTable = pgTable("doctors", {
   id: uuid("id").defaultRandom().primaryKey(),
   clinicId: uuid("clinic_id")
@@ -255,8 +284,6 @@ export const doctorsTableRelations = relations(
     odontograms: many(odontogramsTable), // NOVA RELAÇÃO
   }),
 );
-
-export const patientSexEnum = pgEnum("patient_sex", ["male", "female"]);
 
 export const patientsTable = pgTable("patients", {
   id: uuid("id").defaultRandom().primaryKey(),
