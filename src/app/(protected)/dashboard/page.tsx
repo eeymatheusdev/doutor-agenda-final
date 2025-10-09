@@ -1,4 +1,5 @@
 // src/app/(protected)/dashboard/page.tsx
+
 import dayjs from "dayjs";
 import { Calendar } from "lucide-react";
 import { headers } from "next/headers";
@@ -25,14 +26,32 @@ import StatsCards from "./_components/stats-cards";
 import TopDoctors from "./_components/top-doctors";
 import TopSpecialties from "./_components/top-specialties";
 
+interface DashboardSearchParams {
+  from?: string;
+  to?: string;
+}
+
+/**
+ * IMPORTANT:
+ * Next (v15+ / recent App Router) types `searchParams` as a Promise.
+ * So the prop here must be compatible with that (Promise<...> | undefined).
+ */
 interface DashboardPageProps {
-  searchParams: {
-    from: string;
-    to: string;
-  };
+  searchParams?: Promise<DashboardSearchParams>;
 }
 
 const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
+  // Resolve searchParams (await works whether next gives a Promise or a plain value at runtime)
+  const resolvedSearchParams = await searchParams;
+  const from =
+    typeof resolvedSearchParams?.from === "string"
+      ? resolvedSearchParams.from
+      : undefined;
+  const to =
+    typeof resolvedSearchParams?.to === "string"
+      ? resolvedSearchParams.to
+      : undefined;
+
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -45,13 +64,15 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
   if (!session.user.plan) {
     redirect("/new-subscription");
   }
-  const { from, to } = searchParams; // <-- CORRIGIDO: Removido 'await'
 
   if (!from || !to) {
     redirect(
-      `/dashboard?from=${dayjs().format("YYYY-MM-DD")}&to=${dayjs().add(1, "month").format("YYYY-MM-DD")}`,
+      `/dashboard?from=${dayjs().format("YYYY-MM-DD")}&to=${dayjs()
+        .add(1, "month")
+        .format("YYYY-MM-DD")}`,
     );
   }
+
   const {
     totalRevenue,
     totalAppointments,
