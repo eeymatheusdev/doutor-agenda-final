@@ -25,7 +25,11 @@ import { Separator } from "@/components/ui/separator";
 import { doctorsTable } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-import { PERMANENT_TEETH_FDI, QuadrantKeys, ToothNumber } from "../_constants";
+import {
+  PERMANENT_TEETH_FDI,
+  QuadrantKeys,
+  ToothNumber,
+} from "../../[patient-id]/odontogram/_constants";
 import { OdontogramProvider, useOdontogram } from "./odontogram-context"; // CORRIGIDO
 import { Tooth } from "./tooth";
 

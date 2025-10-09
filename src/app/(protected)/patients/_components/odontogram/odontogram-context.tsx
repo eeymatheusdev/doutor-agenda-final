@@ -14,14 +14,14 @@ import {
   ODONTOGRAM_STATUS_MAP,
   PERMANENT_TEETH_FDI,
   ToothFace,
-} from "../_constants";
+} from "../../[patient-id]/odontogram/_constants";
 import {
   OdontogramMark,
   OdontogramRecord,
   OdontogramState,
   ToothNumber,
   VisualOdontogram,
-} from "../_types";
+} from "../../[patient-id]/odontogram/_types";
 import ToothModal from "./tooth-modal";
 
 // Define o Doctor type

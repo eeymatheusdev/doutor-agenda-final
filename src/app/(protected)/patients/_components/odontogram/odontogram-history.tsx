@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/tooltip";
 import { doctorsTable } from "@/db/schema";
 
-import { ODONTOGRAM_STATUS_MAP } from "../_constants";
-import { OdontogramMarkDb } from "../_types";
+import { ODONTOGRAM_STATUS_MAP } from "../../[patient-id]/odontogram/_constants";
+import { OdontogramMarkDb } from "../../[patient-id]/odontogram/_types";
 import { useOdontogram } from "./odontogram-context"; // CORRIGIDO
 
 // Tipo para o médico simplificado (o mesmo usado em odontogram-context)

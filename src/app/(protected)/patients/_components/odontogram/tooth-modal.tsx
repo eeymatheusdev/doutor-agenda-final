@@ -36,8 +36,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-import { ODONTOGRAM_STATUS_MAP, TOOTH_FACES, ToothFace } from "../_constants";
-import { OdontogramMark } from "../_types";
+import {
+  ODONTOGRAM_STATUS_MAP,
+  TOOTH_FACES,
+  ToothFace,
+} from "../../[patient-id]/odontogram/_constants";
+import { OdontogramMark } from "../../[patient-id]/odontogram/_types";
 import { useOdontogram } from "./odontogram-context"; // CORRIGIDO
 
 // As opções de status são derivadas do mapa de constantes

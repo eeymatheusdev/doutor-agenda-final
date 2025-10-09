@@ -1,5 +1,5 @@
 // src/actions/anamnesis/upsert-anamnesis.ts
-"use server"; // FIX: Adicionado para isolar imports de servidor
+"use server";
 
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -7,7 +7,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { db } from "@/db";
-import { anamnesesTable, usersTable } from "@/db/schema";
+import { anamnesesTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { actionClient } from "@/lib/next-safe-action";
 
@@ -106,35 +106,3 @@ export const upsertAnamnesis = actionClient
     revalidatePath(`/patients/${patientId}/anamnesis`);
     return { success: true };
   });
-
-// FUNÇÃO SERVER-ONLY para buscar histórico (usada pela API Route)
-export async function getAnamnesesByPatient(parsedInput: {
-  patientId: string;
-}) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user || !session.user.clinic?.id) {
-    // Lançar erro para ser capturado e tratado pela API Route
-    throw new Error("Não autorizado ou clínica não encontrada.");
-  }
-
-  const clinicId = session.user.clinic.id;
-
-  const anamneses = await db.query.anamnesesTable.findMany({
-    where: and(
-      eq(anamnesesTable.patientId, parsedInput.patientId),
-      eq(anamnesesTable.clinicId, clinicId),
-    ),
-    with: {
-      creator: {
-        columns: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-    orderBy: desc(anamnesesTable.version),
-  });
-
-  // Adapta o tipo para inclusão do criador
-  return anamneses as AnamnesisRecord[];
-}

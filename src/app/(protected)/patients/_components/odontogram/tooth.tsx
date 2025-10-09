@@ -23,8 +23,11 @@ import {
   ODONTOGRAM_STATUS_MAP,
   OdontogramStatus,
   ToothFace,
-} from "../_constants";
-import { ToothFaceMarks, ToothNumber } from "../_types";
+} from "../../[patient-id]/odontogram/_constants";
+import {
+  ToothFaceMarks,
+  ToothNumber,
+} from "../../[patient-id]/odontogram/_types";
 import { useOdontogram } from "./odontogram-context";
 
 interface ToothProps {

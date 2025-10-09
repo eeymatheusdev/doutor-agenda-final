@@ -15,8 +15,8 @@ import { db } from "@/db";
 import { patientsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
-import AnamnesisCanvas from "./_components/anamnesis-canvas";
-import AnamnesisHistory from "./_components/anamnesis-history";
+import AnamnesisCanvas from "../../_components/anamnesis/anamnesis-canvas";
+import AnamnesisHistory from "../../_components/anamnesis/anamnesis-history";
 
 // Forçando o tipo 'any' na desestruturação das props
 export default async function AnamnesisPage({ params }: any) {

@@ -16,8 +16,8 @@ import { db } from "@/db";
 import { doctorsTable, patientsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
-import OdontogramCanvas from "./_components/odontogram-canvas";
-import OdontogramHistory from "./_components/odontogram-history"; // Importação do novo componente
+import OdontogramCanvas from "../../_components/odontogram/odontogram-canvas";
+import OdontogramHistory from "../../_components/odontogram/odontogram-history"; // Importação do novo componente
 
 // Forçando o tipo 'any' na desestruturação das props para contornar o bug de tipagem do Next.js (params como Promise)
 export default async function OdontogramPage({ params, searchParams }: any) {

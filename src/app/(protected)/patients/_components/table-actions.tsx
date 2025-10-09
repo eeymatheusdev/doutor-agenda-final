@@ -77,7 +77,7 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link
-                href={`/patients/${patient.id}/odontogram`}
+                href={`/patients/${patient.id}?tab=odontogram`}
                 className="gap-2"
               >
                 <Component className="h-4 w-4" />
@@ -86,7 +86,7 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link
-                href={`/patients/${patient.id}/anamnesis`}
+                href={`/patients/${patient.id}?tab=anamnese`}
                 className="gap-2"
               >
                 <ClipboardList className="h-4 w-4" />
