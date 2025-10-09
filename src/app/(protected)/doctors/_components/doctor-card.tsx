@@ -7,6 +7,7 @@ import {
   Mail,
   TrashIcon,
 } from "lucide-react";
+import Link from "next/link"; // Importar Link
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -37,14 +38,10 @@ import { Separator } from "@/components/ui/separator";
 import { doctorsTable } from "@/db/schema";
 import { formatCurrencyInCents } from "@/helpers/currency";
 
-// 1. CORREÇÃO: Importar DentalSpecialty
 import { DentalSpecialty } from "../_constants";
 import { getAvailability } from "../_helpers/availability";
 import UpsertDoctorForm from "./upsert-doctor-form";
 
-// 2. CORREÇÃO: Usar DentalSpecialty[] para 'specialties' e ajustar 'dateOfBirth' para ser compatível
-// Novo tipo para o objeto doctor, já que specialties agora é um array
-// Adicionando 'export' e ajustando a interface para refletir o tipo esperado
 export interface Doctor
   extends Omit<
     typeof doctorsTable.$inferSelect,
@@ -79,28 +76,52 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
     .map((name) => name[0])
     .join("");
   const availability = getAvailability(doctor);
-  // Exibe múltiplas especialidades unidas por vírgula
   const specialtiesText = doctor.specialties.join(", ");
+
+  const getStatusBadgeVariant = (
+    status: "adimplente" | "pendente" | "atrasado",
+  ) => {
+    switch (status) {
+      case "adimplente":
+        return "default";
+      case "pendente":
+        return "secondary";
+      case "atrasado":
+        return "destructive";
+    }
+  };
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Avatar className="h-10 w-10">
-            <AvatarFallback>{doctorInitials}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="text-sm font-medium">{doctor.name}</h3>
-            {/* Displaying multiple specialties */}
-            <p className="text-muted-foreground text-sm">{specialtiesText}</p>
-            <p className="text-muted-foreground text-sm">
-              CRO/CRM: {doctor.cro}
-            </p>
-            <p className="text-muted-foreground flex items-center gap-1 text-sm">
-              <Mail className="size-3" />
-              {doctor.email}
-            </p>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback>{doctorInitials}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="text-sm font-medium">{doctor.name}</h3>
+              <p className="text-muted-foreground text-sm">{specialtiesText}</p>
+              <p className="text-muted-foreground text-sm">
+                CRO/CRM: {doctor.cro}
+              </p>
+              <p className="text-muted-foreground flex items-center gap-1 text-sm">
+                <Mail className="size-3" />
+                {doctor.email}
+              </p>
+            </div>
           </div>
+          <Badge
+            variant={getStatusBadgeVariant(doctor.financialStatus)}
+            className={
+              doctor.financialStatus === "adimplente"
+                ? "bg-green-500 hover:bg-green-600"
+                : ""
+            }
+          >
+            {doctor.financialStatus.charAt(0).toUpperCase() +
+              doctor.financialStatus.slice(1)}
+          </Badge>
         </div>
       </CardHeader>
       <Separator />
@@ -131,19 +152,23 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
           <UpsertDoctorForm
             doctor={{
               ...doctor,
-              // O campo dateOfBirth é convertido para string/null para o formulário
               dateOfBirth: doctor.dateOfBirth
                 ? doctor.dateOfBirth.toString()
                 : null,
               availableFromTime: availability.from.format("HH:mm:ss"),
               availableToTime: availability.to.format("HH:mm:ss"),
-              // specialties já é DentalSpecialty[] devido à correção da interface 'Doctor'
               specialties: doctor.specialties,
             }}
             onSuccess={() => setIsUpsertDoctorDialogOpen(false)}
             isOpen={isUpsertDoctorDialogOpen}
           />
         </Dialog>
+        <Button asChild className="w-full" variant="outline">
+          <Link href={`/doctors/${doctor.id}/financials`}>
+            <DollarSignIcon className="mr-2 h-4 w-4" />
+            Financeiro
+          </Link>
+        </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline" className="w-full">

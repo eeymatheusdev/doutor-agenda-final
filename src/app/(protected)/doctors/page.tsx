@@ -35,11 +35,8 @@ const DoctorsPage = async () => {
     where: eq(doctorsTable.clinicId, session.user.clinic.id),
   });
 
-  // CORREÇÃO: Mapeia os dados retornados para converter a string dateOfBirth em objeto Date,
-  // resolvendo a incompatibilidade de tipos com a interface Doctor.
   const adaptedDoctors: Doctor[] = doctors.map((doctor) => ({
     ...doctor,
-    // Converte a string ISO (retornada pelo Drizzle) para um objeto Date
     dateOfBirth: new Date(doctor.dateOfBirth),
   })) as Doctor[];
 
@@ -55,7 +52,7 @@ const DoctorsPage = async () => {
         </PageActions>
       </PageHeader>
       <PageContent>
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {adaptedDoctors.map((doctor) => (
             <DoctorCard key={doctor.id} doctor={doctor} />
           ))}
