@@ -11,6 +11,7 @@ import {
   Stethoscope,
   UsersRound,
 } from "lucide-react";
+import { DollarSign } from "lucide-react"; // Novo ícone
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -58,6 +59,12 @@ const items = [
     title: "Pacientes",
     url: "/patients",
     icon: UsersRound,
+  },
+  {
+    // Novo item
+    title: "Financeiro",
+    url: "/financials",
+    icon: DollarSign,
   },
 ];
 

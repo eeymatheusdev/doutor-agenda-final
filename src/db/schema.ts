@@ -4,10 +4,10 @@ import {
   date,
   integer,
   jsonb,
-  numeric, // Adicionado para valores monetários
+  numeric,
   pgEnum,
   pgTable,
-  serial, // Adicionado para IDs auto-incrementais
+  serial,
   text,
   time,
   timestamp,
@@ -247,6 +247,17 @@ export const dentalSpecialtyEnum = pgEnum("dental_specialty", [
   "Ortopedia Funcional dos Maxilares",
 ]);
 
+export const clinicFinancialTransactionTypeEnum = pgEnum(
+  "clinic_financial_transaction_type",
+  ["revenue", "expense", "payment_doctor", "commission"],
+);
+
+export const clinicFinancialStatusEnum = pgEnum("clinic_financial_status", [
+  "pending",
+  "paid",
+  "overdue",
+]);
+
 export const patientSexEnum = pgEnum("patient_sex", ["male", "female"]);
 
 export const clinicsTable = pgTable("clinics", {
@@ -315,8 +326,51 @@ export const clinicsTableRelations = relations(clinicsTable, ({ many }) => ({
   patients: many(patientsTable),
   appointments: many(appointmentsTable),
   usersToClinics: many(usersToClinicsTable),
-  odontograms: many(odontogramsTable), // Adicionado para a relação
+  odontograms: many(odontogramsTable),
+  clinicFinances: many(clinicFinancesTable), // Nova Relação
 }));
+
+export const clinicFinancesTable = pgTable("clinic_finances", {
+  id: serial("id").primaryKey(),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  patientId: uuid("patient_id").references(() => patientsTable.id, {
+    onDelete: "set null",
+  }),
+  doctorId: uuid("doctor_id").references(() => doctorsTable.id, {
+    onDelete: "set null",
+  }),
+  type: clinicFinancialTransactionTypeEnum("type").notNull(),
+  category: text("category").notNull(),
+  amount: numeric("amount").notNull(),
+  description: text("description"),
+  method: text("method"),
+  dueDate: date("due_date"),
+  status: clinicFinancialStatusEnum("status").default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const clinicFinancesTableRelations = relations(
+  clinicFinancesTable,
+  ({ one }) => ({
+    clinic: one(clinicsTable, {
+      fields: [clinicFinancesTable.clinicId],
+      references: [clinicsTable.id],
+    }),
+    patient: one(patientsTable, {
+      fields: [clinicFinancesTable.patientId],
+      references: [patientsTable.id],
+    }),
+    doctor: one(doctorsTable, {
+      fields: [clinicFinancesTable.doctorId],
+      references: [doctorsTable.id],
+    }),
+  }),
+);
 
 export const doctorsTable = pgTable("doctors", {
   id: uuid("id").defaultRandom().primaryKey(),
