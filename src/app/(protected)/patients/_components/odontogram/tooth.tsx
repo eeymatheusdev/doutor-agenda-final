@@ -1,4 +1,3 @@
-// src/app/(protected)/patients/[id]/odontogram/_components/tooth.tsx
 "use client";
 
 import { motion, useMotionValue } from "framer-motion";
@@ -13,21 +12,21 @@ import {
 import * as React from "react";
 
 import {
+  ODONTOGRAM_STATUS_MAP,
+  OdontogramStatus,
+  ToothFace,
+} from "@/app/(protected)/patients/[patientId]/odontogram/_constants";
+import {
+  ToothFaceMarks,
+  ToothNumber,
+} from "@/app/(protected)/patients/[patientId]/odontogram/_types";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-import {
-  ODONTOGRAM_STATUS_MAP,
-  OdontogramStatus,
-  ToothFace,
-} from "../../[patient-id]/odontogram/_constants";
-import {
-  ToothFaceMarks,
-  ToothNumber,
-} from "../../[patient-id]/odontogram/_types";
 import { useOdontogram } from "./odontogram-context";
 
 interface ToothProps {
@@ -37,7 +36,6 @@ interface ToothProps {
   isUpper: boolean;
 }
 
-// Mapeamento de Status para Ícone (Lucide Icons)
 const STATUS_ICON_MAP: Record<OdontogramStatus, React.ElementType> = {
   carie: AlertTriangle,
   restauracao: Check,
@@ -49,18 +47,13 @@ const STATUS_ICON_MAP: Record<OdontogramStatus, React.ElementType> = {
   saudavel: Check,
 };
 
-// --- CSS para Formato de Dente ---
-// Definindo formas mais orgânicas (coroa) usando clip-path
 const TOOTH_SHAPE_CLASSES: Record<"anterior" | "posterior", string> = {
-  // Incisivos e Caninos: Tapered body, rounded crown for a more realistic look
   anterior:
     "rounded-t-lg [clip-path:polygon(0%_0%,100%_0%,100%_90%,85%_100%,15%_100%,0%_90%)]",
-  // Molares e Pré-molares: Wider crown, subtle taper
   posterior:
     "rounded-t-lg [clip-path:polygon(0%_0%,100%_0%,100%_80%,80%_100%,20%_100%,0%_80%)]",
 };
 
-// Helper para obter o label da face
 const getFaceLabel = (value: ToothFace) => {
   const faces = [
     { label: "Oclusal/Incisal", value: "oclusal" },
@@ -75,8 +68,6 @@ const getFaceLabel = (value: ToothFace) => {
   );
 };
 
-// --- Componente da Face ---
-
 const ToothFaceComp: React.FC<{
   face: ToothFace;
   mark?: ToothFaceMarks[ToothFace];
@@ -86,20 +77,14 @@ const ToothFaceComp: React.FC<{
   const { selectTooth } = useOdontogram();
   const Icon = mark ? STATUS_ICON_MAP[mark.status] : Check;
 
-  // Determinação se é dente posterior ou anterior
   const isPosterior = ["8", "7", "6", "5", "4"].includes(toothNumber[1]);
-  // A face oclusal ou incisal é definida pelo tipo de dente
   const isOcclusalOrIncisal = face === "oclusal" || face === "incisal";
 
-  // Classes básicas para todas as faces
   const baseClasses = "absolute cursor-pointer transition-colors duration-150";
-
-  // Cores: se tiver marca, usa a cor da marca, se não, um tom neutro para visualização
   const fillColor = mark?.color || "bg-transparent";
   const defaultFill = mark ? fillColor : "bg-gray-100/50";
   const hoverClass = mark ? "" : "hover:bg-gray-200/50";
 
-  // Estilos posicionais e de recorte (clip-path)
   let faceClasses = "";
   let iconCenter = false;
   let hasBorder = true;
@@ -107,7 +92,6 @@ const ToothFaceComp: React.FC<{
   switch (face) {
     case "oclusal":
       if (!isPosterior) return null;
-      // Coroa (topo da coroa)
       faceClasses =
         "w-4/5 h-1/5 top-0 left-1/2 -translate-x-1/2 rounded-full z-30";
       iconCenter = true;
@@ -115,40 +99,32 @@ const ToothFaceComp: React.FC<{
       break;
     case "incisal":
       if (isPosterior) return null;
-      // Borda incisal (base da coroa no dente anterior)
       faceClasses =
         "w-4/5 h-1/5 bottom-0 left-1/2 -translate-x-1/2 rounded-full z-30";
       iconCenter = true;
       hasBorder = false;
       break;
     case "mesial":
-      // Lateral esquerda (trapezoidal vertical)
       faceClasses =
         "w-1/4 h-3/5 top-1/5 left-0 rounded-l-md [clip-path:polygon(0%_0%,100%_20%,100%_80%,0%_100%)] z-20";
       break;
     case "distal":
-      // Lateral direita (trapezoidal vertical)
       faceClasses =
         "w-1/4 h-3/5 top-1/5 right-0 rounded-r-md [clip-path:polygon(0%_20%,100%_0%,100%_100%,0%_80%)] z-20";
       break;
     case "vestibular":
     case "lingual":
-      // Centro (o maior) - Corpo principal da coroa
       faceClasses =
         "w-3/5 h-4/5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-t-full rounded-b-xl z-10";
       iconCenter = true;
-      hasBorder = false; // A borda principal é do dente completo
+      hasBorder = false;
       if (face === "lingual") {
-        faceClasses = cn(faceClasses, "opacity-0 z-50"); // Lingual é transparente para clique
+        faceClasses = cn(faceClasses, "opacity-0 z-50");
       } else {
-        faceClasses = cn(faceClasses, "border-2 border-gray-300"); // Vestibular recebe uma borda de destaque
+        faceClasses = cn(faceClasses, "border-2 border-gray-300");
       }
       break;
   }
-
-  const tooltipContent = mark
-    ? `${ODONTOGRAM_STATUS_MAP[mark.status].label}: ${mark.observation || "Sem observação"}`
-    : `Saudável / Clique para marcar ${getFaceLabel(face)}`;
 
   return (
     <Tooltip>
@@ -163,7 +139,6 @@ const ToothFaceComp: React.FC<{
           )}
           onClick={() => selectTooth(toothNumber, face)}
         >
-          {/* Ícone no centro da face */}
           {iconCenter && mark && mark.status !== "saudavel" && (
             <Icon
               className={cn(
@@ -174,14 +149,13 @@ const ToothFaceComp: React.FC<{
               )}
             />
           )}
-          {/* Rótulo para visualização de faces (Vestibular) */}
           {face === "vestibular" && (
             <span
               className={cn(
                 "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[0.6rem] font-bold text-gray-700",
                 mark && mark.status !== "saudavel"
                   ? "opacity-0"
-                  : "opacity-100", // Oculta se houver marcação
+                  : "opacity-100",
               )}
             >
               V
@@ -212,17 +186,14 @@ export const Tooth: React.FC<ToothProps> = ({
   const y = useMotionValue(0);
   const rotation = useMotionValue(0);
 
-  // Se o dente estiver ausente, marcamos o componente principal.
   const isMissing =
     (marks?.oclusal?.status === "ausente" &&
-      marks?.oclusal?.status === "ausente") || // Check for posterior
+      marks?.oclusal?.status === "ausente") ||
     (marks?.incisal?.status === "ausente" &&
-      marks?.incisal?.status === "ausente"); // Check for anterior
+      marks?.incisal?.status === "ausente");
 
-  // Determina as faces relevantes
   const isPosterior = ["8", "7", "6", "5", "4"].includes(toothNumber[1]);
 
-  // Construindo a lista de faces para renderizar
   const facesToRender: ToothFace[] = [
     isPosterior ? "oclusal" : "incisal",
     "vestibular",
@@ -231,14 +202,13 @@ export const Tooth: React.FC<ToothProps> = ({
     "distal",
   ];
 
-  // Classe de forma do dente para o container principal
   const toothShapeClass = isPosterior
     ? TOOTH_SHAPE_CLASSES.posterior
     : TOOTH_SHAPE_CLASSES.anterior;
 
   return (
     <motion.div
-      drag // Efeito de arrastar conforme solicitado
+      drag
       dragConstraints={{ left: -10, right: 10, top: -10, bottom: 10 }}
       style={{ x, y, rotate: rotation, cursor: "grab" }}
       className={cn(
@@ -248,11 +218,10 @@ export const Tooth: React.FC<ToothProps> = ({
         className,
       )}
     >
-      {/* Etiqueta do número do dente */}
       <div
         className={cn(
           "pointer-events-none absolute inset-0 flex items-center justify-center",
-          isMissing ? "top-1/4" : "bottom-1/4", // Ajusta a posição
+          isMissing ? "top-1/4" : "bottom-1/4",
         )}
       >
         <span className="text-xs font-bold text-gray-700">{toothNumber}</span>
@@ -260,7 +229,7 @@ export const Tooth: React.FC<ToothProps> = ({
       <div
         className={cn(
           "relative h-full w-full",
-          isUpper ? "rotate-180" : "rotate-0", // Gira o dente inferior
+          isUpper ? "rotate-180" : "rotate-0",
         )}
       >
         {facesToRender.map((face) => (

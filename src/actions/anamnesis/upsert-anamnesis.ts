@@ -1,4 +1,3 @@
-// src/actions/anamnesis/upsert-anamnesis.ts
 "use server";
 
 import { and, desc, eq } from "drizzle-orm";
@@ -17,7 +16,6 @@ export type AnamnesisRecord = typeof anamnesesTable.$inferSelect & {
   creator: { id: string; name: string };
 };
 
-// Função auxiliar para gerar um resumo
 const generateSummary = (data: z.infer<typeof anamnesisSchema>): string => {
   const chiefComplaint =
     data.chiefComplaint || "Nenhuma queixa principal registrada.";
@@ -33,7 +31,6 @@ const generateSummary = (data: z.infer<typeof anamnesisSchema>): string => {
 export const upsertAnamnesis = actionClient
   .schema(
     anamnesisSchema.extend({
-      // Adiciona campos de data como string para fácil formatação antes da inserção
       onsetDate: z.string().optional().nullable(),
       lastDentalVisit: z.string().optional().nullable(),
       consentDate: z.string().optional().nullable(),
@@ -49,38 +46,32 @@ export const upsertAnamnesis = actionClient
       throw new Error("Não autorizado ou clínica não encontrada.");
     }
 
-    // O id é agora um campo no schema extendido (vem do form)
     const { id, patientId, ...formData } = parsedInput;
     const clinicId = session.user.clinic.id;
     const createdBy = session.user.id;
 
-    // Constrói o objeto completo para o summary (incluindo patientId)
     const dataForSummary = {
-      patientId, // FIX: Re-adiciona patientId ao objeto para tipagem do summary
+      patientId,
       ...formData,
     } as z.infer<typeof anamnesisSchema>;
 
-    // Remove o id e patientId do objeto de dados a serem armazenados
     const dataToStore = Object.fromEntries(
       Object.entries(formData).filter(([key]) => key !== "id"),
     );
-    const summary = generateSummary(dataForSummary); // FIX: Chamada com objeto completo
+    const summary = generateSummary(dataForSummary);
 
     if (id) {
-      // Opção 1: Atualiza um rascunho existente (se o ID for fornecido)
       await db
         .update(anamnesesTable)
         .set({
           summary,
           data: dataToStore,
           attachments: parsedInput.attachments || [],
-          // A coluna updatedAt é atualizada automaticamente pelo Drizzle
         })
         .where(
           and(eq(anamnesesTable.id, id), eq(anamnesesTable.clinicId, clinicId)),
         );
     } else {
-      // Opção 2: Insere um novo registro (nova versão ou primeiro)
       const latestRecord = await db.query.anamnesesTable.findFirst({
         where: and(
           eq(anamnesesTable.patientId, patientId),
@@ -105,4 +96,34 @@ export const upsertAnamnesis = actionClient
 
     revalidatePath(`/patients/${patientId}/anamnesis`);
     return { success: true };
+  });
+
+export const getAnamnesesByPatient = actionClient
+  .schema(z.object({ patientId: z.string().uuid() }))
+  .action(async ({ parsedInput }) => {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session?.user || !session.user.clinic?.id) {
+      throw new Error("Não autorizado ou clínica não encontrada.");
+    }
+
+    const anamneses = await db.query.anamnesesTable.findMany({
+      where: and(
+        eq(anamnesesTable.patientId, parsedInput.patientId),
+        eq(anamnesesTable.clinicId, session.user.clinic.id),
+      ),
+      orderBy: [desc(anamnesesTable.createdAt)],
+      with: {
+        creator: {
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return anamneses;
   });

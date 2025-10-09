@@ -1,7 +1,7 @@
 "use client";
 
-import AnamnesisCanvas from "../../../_components/anamnesis/anamnesis-canvas";
-import AnamnesisHistory from "../../../_components/anamnesis/anamnesis-history";
+import AnamnesisCanvas from "@/app/(protected)/patients/_components/anamnesis/anamnesis-canvas";
+import AnamnesisHistory from "@/app/(protected)/patients/_components/anamnesis/anamnesis-history";
 
 export default function AnamnesisTab({ patientId }: { patientId: string }) {
   return (

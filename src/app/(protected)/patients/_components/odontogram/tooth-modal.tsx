@@ -1,4 +1,3 @@
-// src/app/(protected)/patients/[id]/odontogram/_components/tooth-modal.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +7,12 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import {
+  ODONTOGRAM_STATUS_MAP,
+  TOOTH_FACES,
+  ToothFace,
+} from "@/app/(protected)/patients/[patientId]/odontogram/_constants";
+import { OdontogramMark } from "@/app/(protected)/patients/[patientId]/odontogram/_types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,15 +41,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-import {
-  ODONTOGRAM_STATUS_MAP,
-  TOOTH_FACES,
-  ToothFace,
-} from "../../[patient-id]/odontogram/_constants";
-import { OdontogramMark } from "../../[patient-id]/odontogram/_types";
-import { useOdontogram } from "./odontogram-context"; // CORRIGIDO
+import { useOdontogram } from "./odontogram-context";
 
-// As opções de status são derivadas do mapa de constantes
 const statusOptions = Object.entries(ODONTOGRAM_STATUS_MAP).map(
   ([key, { label }]) => ({ value: key, label }),
 );
@@ -53,7 +51,6 @@ const statusEnumValues = Object.keys(ODONTOGRAM_STATUS_MAP) as [
   ...string[],
 ];
 
-// [Cite: 185]
 const zToothMarkSchema = z.object({
   status: z.enum(statusEnumValues as any, {
     required_error: "O status é obrigatório.",
@@ -75,7 +72,7 @@ export default function ToothModal() {
     isModalOpen,
     closeModal,
     isSaving,
-    saveOdontogram, // Chamado para persistir a alteração
+    saveOdontogram,
   } = useOdontogram();
 
   const existingMark =
@@ -91,7 +88,6 @@ export default function ToothModal() {
     },
   });
 
-  // Resetar o formulário quando o modal for aberto ou o dente mudar
   React.useEffect(() => {
     if (isModalOpen) {
       form.reset({
@@ -112,7 +108,6 @@ export default function ToothModal() {
       observation: values.observation || null,
     };
 
-    // 1. Atualiza o estado local
     setOdontogramState((prev) => {
       const newMarks = { ...prev[selectedTooth].marks };
 
@@ -133,11 +128,7 @@ export default function ToothModal() {
       };
     });
 
-    // 2. Salva no banco de dados (via context)
-    // Usamos o `await` para garantir que o save termine antes de fechar o modal
     await saveOdontogram();
-
-    // 3. Fecha o modal
     closeModal();
   };
 
@@ -154,7 +145,6 @@ export default function ToothModal() {
             Defina o status e adicione observações para esta face do dente.
           </DialogDescription>
         </DialogHeader>
-        {/* [Cite: 186] */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField

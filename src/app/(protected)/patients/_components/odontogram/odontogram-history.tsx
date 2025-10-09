@@ -1,4 +1,3 @@
-// src/app/(protected)/patients/[id]/odontogram/_components/odontogram-history.tsx
 "use client";
 
 import { format } from "date-fns";
@@ -6,6 +5,8 @@ import { ptBR } from "date-fns/locale";
 import { History, Microscope } from "lucide-react";
 import * as React from "react";
 
+import { ODONTOGRAM_STATUS_MAP } from "@/app/(protected)/patients/[patientId]/odontogram/_constants";
+import { OdontogramMarkDb } from "@/app/(protected)/patients/[patientId]/odontogram/_types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,11 +17,8 @@ import {
 } from "@/components/ui/tooltip";
 import { doctorsTable } from "@/db/schema";
 
-import { ODONTOGRAM_STATUS_MAP } from "../../[patient-id]/odontogram/_constants";
-import { OdontogramMarkDb } from "../../[patient-id]/odontogram/_types";
-import { useOdontogram } from "./odontogram-context"; // CORRIGIDO
+import { useOdontogram } from "./odontogram-context";
 
-// Tipo para o médico simplificado (o mesmo usado em odontogram-context)
 type Doctor = Pick<
   typeof doctorsTable.$inferSelect,
   "id" | "name" | "specialties"
@@ -31,9 +29,6 @@ interface OdontogramHistoryProps {
   doctors: Doctor[];
 }
 
-/**
- * Agrupa as marcas por status para criar um resumo.
- */
 const getMarksSummary = (marks: OdontogramMarkDb[]) => {
   const summary: { [key: string]: number } = {};
 

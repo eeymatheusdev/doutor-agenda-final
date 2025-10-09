@@ -1,9 +1,8 @@
 "use client";
 
+import OdontogramCanvas from "@/app/(protected)/patients/_components/odontogram/odontogram-canvas";
+import OdontogramHistory from "@/app/(protected)/patients/_components/odontogram/odontogram-history";
 import { doctorsTable } from "@/db/schema";
-
-import OdontogramCanvas from "../../../_components/odontogram/odontogram-canvas";
-import OdontogramHistory from "../../../_components/odontogram/odontogram-history";
 
 type Doctor = Pick<
   typeof doctorsTable.$inferSelect,

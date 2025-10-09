@@ -2,6 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
+import { z } from "zod";
 
 import { db } from "@/db";
 import { patientsTable } from "@/db/schema";
