@@ -19,8 +19,11 @@ import { auth } from "@/lib/auth";
 import OdontogramCanvas from "../../_components/odontogram/odontogram-canvas";
 import OdontogramHistory from "../../_components/odontogram/odontogram-history"; // Importação do novo componente
 
-// Forçando o tipo 'any' na desestruturação das props para contornar o bug de tipagem do Next.js (params como Promise)
-export default async function OdontogramPage({ params, searchParams }: any) {
+interface Props {
+  params: { patientId: string };
+}
+
+export default async function OdontogramPage({ params }: Props) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {
@@ -35,7 +38,7 @@ export default async function OdontogramPage({ params, searchParams }: any) {
 
   // Acessando params.id sem o erro de tipagem
   const patientPromise = db.query.patientsTable.findFirst({
-    where: eq(patientsTable.id, params.id),
+    where: eq(patientsTable.id, params.patientId),
   });
 
   // Busca a lista de médicos da clínica para o formulário
@@ -71,9 +74,9 @@ export default async function OdontogramPage({ params, searchParams }: any) {
         {/* Layout em 2 colunas para exibir o canvas e o histórico */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
           {/* Odontograma Principal */}
-          <OdontogramCanvas patientId={params.id} doctors={doctors} />
+          <OdontogramCanvas patientId={params.patientId} doctors={doctors} />
           {/* Histórico/Listagem de Registros */}
-          <OdontogramHistory patientId={params.id} doctors={doctors} />
+          <OdontogramHistory patientId={params.patientId} doctors={doctors} />
         </div>
       </PageContent>
     </PageContainer>

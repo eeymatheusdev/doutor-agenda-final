@@ -18,8 +18,11 @@ import { auth } from "@/lib/auth";
 import AnamnesisCanvas from "../../_components/anamnesis/anamnesis-canvas";
 import AnamnesisHistory from "../../_components/anamnesis/anamnesis-history";
 
-// Forçando o tipo 'any' na desestruturação das props
-export default async function AnamnesisPage({ params }: any) {
+interface Props {
+  params: { patientId: string };
+}
+
+export default async function AnamnesisPage({ params }: Props) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {
@@ -33,7 +36,7 @@ export default async function AnamnesisPage({ params }: any) {
   }
 
   const patient = await db.query.patientsTable.findFirst({
-    where: eq(patientsTable.id, params.id),
+    where: eq(patientsTable.id, params.patientId),
   });
 
   if (!patient || patient.clinicId !== session.user.clinic.id) {
@@ -52,8 +55,8 @@ export default async function AnamnesisPage({ params }: any) {
       </PageHeader>
       <PageContent>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
-          <AnamnesisCanvas patientId={params.id} />
-          <AnamnesisHistory patientId={params.id} />
+          <AnamnesisCanvas patientId={params.patientId} />
+          <AnamnesisHistory patientId={params.patientId} />
         </div>
       </PageContent>
     </PageContainer>

@@ -11,13 +11,11 @@ import { auth } from "@/lib/auth";
 import { PatientHeader } from "./_components/patient-header";
 import { PatientTabs } from "./_components/patient-tabs";
 
-interface PatientDetailPageProps {
+interface Props {
   params: { patientId: string };
 }
 
-export default async function PatientDetailPage({
-  params,
-}: PatientDetailPageProps) {
+export default async function PatientDetailPage({ params }: Props) {
   const patientId = params.patientId;
   const session = await auth.api.getSession({ headers: await headers() });
 
