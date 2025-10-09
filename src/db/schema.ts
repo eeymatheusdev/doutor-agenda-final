@@ -13,6 +13,55 @@ import {
   varchar, // Adicionado para tipos com comprimento
 } from "drizzle-orm/pg-core";
 
+// NOVO: Enum para Status de Anamnese
+export const anamnesisStatusEnum = pgEnum("anamnesis_status", [
+  "draft",
+  "finalized",
+]);
+
+// NOVO: Tabela para Anamneses (Fichas Clínicas)
+export const anamnesesTable = pgTable("anamneses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  patientId: uuid("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  createdBy: text("created_by") // User ID (quem criou/editou)
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "restrict" }),
+  version: integer("version").notNull().default(1),
+  status: anamnesisStatusEnum("status").notNull().default("draft"),
+  summary: text("summary"), // Resumo curto para listagem
+  // O campo 'data' armazena o corpo estruturado da anamnese (JSONB)
+  data: jsonb("data").$type<Record<string, any>>().notNull(),
+  // O campo 'attachments' armazena URLs de imagens/arquivos (JSONB de array de objetos)
+  attachments: jsonb("attachments")
+    .$type<{ url: string; name: string; type: string }[]>()
+    .default([])
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const anamnesesTableRelations = relations(anamnesesTable, ({ one }) => ({
+  patient: one(patientsTable, {
+    fields: [anamnesesTable.patientId],
+    references: [patientsTable.id],
+  }),
+  clinic: one(clinicsTable, {
+    fields: [anamnesesTable.clinicId],
+    references: [clinicsTable.id],
+  }),
+  creator: one(usersTable, {
+    fields: [anamnesesTable.createdBy],
+    references: [usersTable.id],
+  }),
+}));
+
 export const usersTable = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -28,6 +77,7 @@ export const usersTable = pgTable("users", {
 
 export const usersTableRelations = relations(usersTable, ({ many }) => ({
   usersToClinics: many(usersToClinicsTable),
+  anamneses: many(anamnesesTable), // NOVA RELAÇÃO
 }));
 
 export const sessionsTable = pgTable("sessions", {
@@ -396,7 +446,8 @@ export const patientsTableRelations = relations(
       references: [clinicsTable.id],
     }),
     appointments: many(appointmentsTable),
-    odontograms: many(odontogramsTable), // NOVA RELAÇÃO
+    odontograms: many(odontogramsTable),
+    anamneses: many(anamnesesTable), // NOVA RELAÇÃO
   }),
 );
 

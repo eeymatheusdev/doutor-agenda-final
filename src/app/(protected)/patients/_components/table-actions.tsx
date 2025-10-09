@@ -1,4 +1,10 @@
-import { Component, EditIcon, MoreVerticalIcon, TrashIcon } from "lucide-react"; // Adicionando Component
+import {
+  ClipboardList,
+  Component,
+  EditIcon,
+  MoreVerticalIcon,
+  TrashIcon,
+} from "lucide-react"; // Adicionando ClipboardList
 import Link from "next/link"; // Importando Link
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
@@ -55,11 +61,7 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
     <>
       <Dialog open={upsertDialogIsOpen} onOpenChange={setUpsertDialogIsOpen}>
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="ghost" size="icon">
-              <MoreVerticalIcon className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
+          {/* ... DropdownMenuTrigger */}
           <DropdownMenuContent>
             <DropdownMenuLabel>{patient.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -67,7 +69,7 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
               <EditIcon />
               Editar
             </DropdownMenuItem>
-            {/* NOVO ITEM: Link para Odontograma */}
+            {/* ITEM: Link para Odontograma */}
             <DropdownMenuItem asChild>
               <Link
                 href={`/patients/${patient.id}/odontogram`}
@@ -77,31 +79,28 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
                 Odontograma
               </Link>
             </DropdownMenuItem>
+            {/* NOVO ITEM: Link para Anamnese */}
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/patients/${patient.id}/anamnesis`}
+                className="gap-2"
+              >
+                <ClipboardList className="h-4 w-4" />
+                Anamnese
+              </Link>
+            </DropdownMenuItem>
             {/* FIM NOVO ITEM */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <DropdownMenuItem
+                  onSelect={(e) => e.preventDefault()}
+                  variant="destructive"
+                >
                   <TrashIcon />
                   Excluir
                 </DropdownMenuItem>
               </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    Tem certeza que deseja deletar esse paciente?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Essa ação não pode ser revertida. Isso irá deletar o
-                    paciente e todas as consultas agendadas.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeletePatientClick}>
-                    Deletar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
+              {/* ... AlertDialogContent */}
             </AlertDialog>
           </DropdownMenuContent>
         </DropdownMenu>
