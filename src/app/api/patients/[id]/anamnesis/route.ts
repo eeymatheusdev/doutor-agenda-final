@@ -5,10 +5,10 @@ import { getAnamnesesByPatient } from "@/actions/anamnesis/upsert-anamnesis";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const patientId = params.id;
+    const { id: patientId } = await params;
 
     const validation = z.string().uuid().safeParse(patientId);
 
@@ -21,8 +21,11 @@ export async function GET(
 
     const result = await getAnamnesesByPatient({ patientId });
 
-    if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
+    if (!result || result.serverError) {
+      return NextResponse.json(
+        { error: result?.serverError || "Failed to fetch data" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json(result.data);

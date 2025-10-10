@@ -12,22 +12,22 @@ export default async function PatientInfoTab({
 }: {
   patientId: string;
 }) {
-  const patient = await getPatientById({ patientId });
+  const patientResult = await getPatientById({ patientId });
 
-  if (!patient.data) {
+  if (!patientResult || !patientResult.data) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Dados Cadastrais</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Paciente não encontrado.</p>
+          <p>Paciente não encontrado ou erro ao carregar os dados.</p>
         </CardContent>
       </Card>
     );
   }
 
-  const { data } = patient;
+  const { data } = patientResult;
 
   const formatPhoneNumber = (phone: string) => {
     const cleaned = phone.replace(/\D/g, "");

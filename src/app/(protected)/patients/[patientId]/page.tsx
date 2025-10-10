@@ -12,16 +12,19 @@ import { PatientHeader } from "./_components/patient-header";
 import { PatientTabs } from "./_components/patient-tabs";
 
 interface Props {
-  params: { patientId: string };
+  params: Promise<{ patientId: string }>;
 }
 
-export default async function PatientDetailPage({ params }: Props) {
+export default async function PatientDetailPage({
+  params: paramsPromise,
+}: Props) {
+  const params = await paramsPromise;
   const patientId = params.patientId;
   const session = await auth.api.getSession({ headers: await headers() });
 
   const patientResult = await getPatientById({ patientId });
 
-  if (!patientResult.data) {
+  if (!patientResult || !patientResult.data) {
     notFound();
   }
 

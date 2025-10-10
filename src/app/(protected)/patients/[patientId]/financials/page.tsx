@@ -18,11 +18,15 @@ import { auth } from "@/lib/auth";
 
 import FinancialDashboard from "./_components/financial-dashboard";
 
+// Interface para as props da página, tratando `params` como uma Promise
+interface PatientFinancialsPageProps {
+  params: Promise<{ patientId: string }>;
+}
+
 export default async function PatientFinancialsPage({
-  params,
-}: {
-  params: { patientId: string };
-}) {
+  params: paramsPromise,
+}: PatientFinancialsPageProps) {
+  const params = await paramsPromise; // Resolve a Promise para obter o objeto de parâmetros
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {

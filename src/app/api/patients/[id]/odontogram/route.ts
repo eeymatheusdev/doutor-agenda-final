@@ -24,15 +24,15 @@ const zOdontogramMark = z.object({
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id: patientId } = await params;
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user || !session.user.clinic?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const patientId = params.id;
     const patient = await db.query.patientsTable.findFirst({
       where: and(
         eq(patientsTable.id, patientId),
@@ -70,15 +70,15 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id: patientId } = await params;
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user || !session.user.clinic?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const patientId = params.id;
     const body = await request.json();
 
     const validationSchema = z.object({

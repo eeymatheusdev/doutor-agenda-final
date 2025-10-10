@@ -1,4 +1,3 @@
-// src/app/(protected)/patients/[id]/odontogram/page.tsx
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -20,10 +19,11 @@ import OdontogramCanvas from "../../_components/odontogram/odontogram-canvas";
 import OdontogramHistory from "../../_components/odontogram/odontogram-history"; // Importação do novo componente
 
 interface Props {
-  params: { patientId: string };
+  params: Promise<{ patientId: string }>;
 }
 
-export default async function OdontogramPage({ params }: Props) {
+export default async function OdontogramPage({ params: paramsPromise }: Props) {
+  const params = await paramsPromise;
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {

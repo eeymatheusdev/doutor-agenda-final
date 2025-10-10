@@ -19,10 +19,11 @@ import AnamnesisCanvas from "../../_components/anamnesis/anamnesis-canvas";
 import AnamnesisHistory from "../../_components/anamnesis/anamnesis-history";
 
 interface Props {
-  params: { patientId: string };
+  params: Promise<{ patientId: string }>;
 }
 
-export default async function AnamnesisPage({ params }: Props) {
+export default async function AnamnesisPage({ params: paramsPromise }: Props) {
+  const params = await paramsPromise;
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {
