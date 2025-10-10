@@ -1,4 +1,4 @@
-// src/app/(protected)/patients/[patientId]/_components/anamnesis-tab.tsx
+// src/app/(protected)/patients/[patientId]/anamnesis/_components/anamnesis-view.tsx
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,8 +12,7 @@ import AnamnesisCanvas from "@/app/(protected)/patients/_components/anamnesis/an
 import { AnamnesisProvider } from "@/app/(protected)/patients/_components/anamnesis/anamnesis-context";
 import AnamnesisHistory from "@/app/(protected)/patients/_components/anamnesis/anamnesis-history";
 
-// Componente Wrapper para conter a lógica do Provedor
-function AnamnesisView({ patientId }: { patientId: string }) {
+export default function AnamnesisView({ patientId }: { patientId: string }) {
   const queryClient = useQueryClient();
 
   const upsertAction = useAction(upsertAnamnesis, {
@@ -21,7 +20,6 @@ function AnamnesisView({ patientId }: { patientId: string }) {
       queryClient.invalidateQueries({
         queryKey: ["anamnesis-history", patientId],
       });
-
       if (input.id) {
         toast.success("Rascunho da anamnese salvo com sucesso!");
       } else {
@@ -39,21 +37,21 @@ function AnamnesisView({ patientId }: { patientId: string }) {
       upsertAction.execute({
         ...data,
         id: currentRecordId,
-        patientId: data.patientId,
+        patientId,
       } as any);
     },
-    [upsertAction],
+    [upsertAction, patientId],
   );
 
   const handleSaveNewVersion = React.useCallback(
     async (data: AnamnesisSchema) => {
       upsertAction.execute({
         ...data,
-        id: undefined, // Garante que é uma nova versão
-        patientId: data.patientId,
+        id: undefined,
+        patientId,
       } as any);
     },
-    [upsertAction],
+    [upsertAction, patientId],
   );
 
   return (
@@ -63,18 +61,10 @@ function AnamnesisView({ patientId }: { patientId: string }) {
       saveNewVersion={handleSaveNewVersion}
       isSaving={upsertAction.isExecuting}
     >
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <AnamnesisCanvas />
-        </div>
-        <div className="xl:col-span-1">
-          <AnamnesisHistory />
-        </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
+        <AnamnesisCanvas />
+        <AnamnesisHistory />
       </div>
     </AnamnesisProvider>
   );
-}
-
-export default function AnamnesisTab({ patientId }: { patientId: string }) {
-  return <AnamnesisView patientId={patientId} />;
 }

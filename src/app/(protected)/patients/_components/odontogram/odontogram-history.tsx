@@ -1,3 +1,4 @@
+// src/app/(protected)/patients/_components/odontogram/odontogram-history.tsx
 "use client";
 
 import { format } from "date-fns";
@@ -15,19 +16,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { doctorsTable } from "@/db/schema";
 
 import { useOdontogram } from "./odontogram-context";
-
-type Doctor = Pick<
-  typeof doctorsTable.$inferSelect,
-  "id" | "name" | "specialties"
->;
-
-interface OdontogramHistoryProps {
-  patientId: string;
-  doctors: Doctor[];
-}
 
 const getMarksSummary = (marks: OdontogramMarkDb[]) => {
   const summary: { [key: string]: number } = {};
@@ -44,9 +34,8 @@ const getMarksSummary = (marks: OdontogramMarkDb[]) => {
   }));
 };
 
-export default function OdontogramHistory({
-  patientId,
-}: OdontogramHistoryProps) {
+// As props patientId e doctors foram removidas
+export default function OdontogramHistory() {
   const { allOdontogramRecords, loadRecordToCanvas } = useOdontogram();
 
   if (!allOdontogramRecords || allOdontogramRecords.length === 0) {

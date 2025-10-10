@@ -387,7 +387,7 @@ const UpsertDoctorForm = ({
           {/* Endereço */}
           <div className="space-y-4 rounded-md border p-4">
             <h4 className="font-semibold">Endereço</h4>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
                 name="zipCode"
@@ -423,7 +423,7 @@ const UpsertDoctorForm = ({
                 )}
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
                 name="number"
@@ -468,7 +468,7 @@ const UpsertDoctorForm = ({
                 )}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="city"

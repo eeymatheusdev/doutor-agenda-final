@@ -1,4 +1,4 @@
-// src/app/(protected)/patients/[id]/odontogram/_components/odontogram-canvas.tsx
+// src/app/(protected)/patients/_components/odontogram/odontogram-canvas.tsx
 "use client";
 
 import { format } from "date-fns";
@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { doctorsTable } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
 import {
@@ -30,19 +29,8 @@ import {
   QuadrantKeys,
   ToothNumber,
 } from "../../[patientId]/odontogram/_constants";
-import { OdontogramProvider, useOdontogram } from "./odontogram-context"; // CORRIGIDO
+import { useOdontogram } from "./odontogram-context";
 import { Tooth } from "./tooth";
-
-// Tipo para o médico simplificado (o mesmo usado em odontogram-context)
-type Doctor = Pick<
-  typeof doctorsTable.$inferSelect,
-  "id" | "name" | "specialties"
->;
-
-interface OdontogramCanvasBaseProps {
-  patientId: string;
-  doctors: Doctor[]; // Recebe a lista de médicos
-}
 
 const QUADRANT_IS_UPPER: Record<QuadrantKeys, boolean> = {
   quadrant1: true,
@@ -73,7 +61,8 @@ function Quadrant({
   );
 }
 
-function OdontogramCanvasBase() {
+// Renomeamos OdontogramCanvasBase para OdontogramCanvas e exportamos como padrão
+export default function OdontogramCanvas() {
   const {
     saveNewOdontogramRecord,
     isSaving,
@@ -82,28 +71,24 @@ function OdontogramCanvasBase() {
     setCurrentDoctorId,
     currentDate,
     setCurrentDate,
-    odontogramState, // Usado para forçar um "dirty" check
   } = useOdontogram();
 
   const hasDoctors = doctors && doctors.length > 0;
 
-  // Condição para desabilitar: se não tiver médico selecionado ou se estiver salvando
   const isDisabled =
     isSaving || !hasDoctors || !currentDoctorId || !currentDate;
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="flex w-full justify-between">
+        <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Arcada Dentária Permanente</CardTitle>
           <Button onClick={saveNewOdontogramRecord} disabled={isDisabled}>
             <Save className="mr-2 h-4 w-4" />
             {isSaving ? "Salvando..." : "Salvar Novo Registro"}
           </Button>
         </div>
-        {/* NOVOS CAMPOS: Médico e Data do Registro */}
         <div className="flex flex-col gap-2 pt-2 sm:flex-row">
-          {/* Seleção do Médico */}
           <Select
             value={currentDoctorId}
             onValueChange={(value) => setCurrentDoctorId(value)}
@@ -120,8 +105,6 @@ function OdontogramCanvasBase() {
               ))}
             </SelectContent>
           </Select>
-
-          {/* Seleção da Data */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -150,7 +133,6 @@ function OdontogramCanvasBase() {
                     setCurrentDate(date);
                   }
                 }}
-                // Permite datas no futuro (para agendar um registro)
                 toYear={new Date().getFullYear() + 1}
                 initialFocus
                 locale={ptBR}
@@ -160,31 +142,23 @@ function OdontogramCanvasBase() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col items-center gap-6">
-          {/* Arcada Superior */}
+        <div className="flex flex-col items-center gap-6 overflow-x-auto p-2">
           <div className="flex justify-center gap-4">
-            {/* Superior Direito (18 a 11) */}
             <Quadrant
               quadrant={PERMANENT_TEETH_FDI.quadrant1}
               isUpper={QUADRANT_IS_UPPER.quadrant1}
             />
-            {/* Superior Esquerdo (21 a 28) */}
             <Quadrant
               quadrant={PERMANENT_TEETH_FDI.quadrant2}
               isUpper={QUADRANT_IS_UPPER.quadrant2}
             />
           </div>
-
           <Separator className="w-full" />
-
-          {/* Arcada Inferior */}
           <div className="flex justify-center gap-4">
-            {/* Inferior Direito (41 a 48) */}
             <Quadrant
               quadrant={PERMANENT_TEETH_FDI.quadrant4}
               isUpper={QUADRANT_IS_UPPER.quadrant4}
             />
-            {/* Inferior Esquerdo (31 a 38) */}
             <Quadrant
               quadrant={PERMANENT_TEETH_FDI.quadrant3}
               isUpper={QUADRANT_IS_UPPER.quadrant3}
@@ -193,13 +167,5 @@ function OdontogramCanvasBase() {
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-export default function OdontogramCanvas(props: OdontogramCanvasBaseProps) {
-  return (
-    <OdontogramProvider patientId={props.patientId} doctors={props.doctors}>
-      <OdontogramCanvasBase />
-    </OdontogramProvider>
   );
 }

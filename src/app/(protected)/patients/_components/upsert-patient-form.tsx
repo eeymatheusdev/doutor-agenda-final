@@ -201,7 +201,7 @@ const UpsertPatientForm = ({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Informações Básicas */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="name"
@@ -234,7 +234,7 @@ const UpsertPatientForm = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="phoneNumber"
@@ -286,7 +286,7 @@ const UpsertPatientForm = ({
           {/* Dados Pessoais Obrigatórios */}
           <div className="space-y-4 rounded-md border p-4">
             <h4 className="font-semibold">Documentos</h4>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
                 name="cpf"
@@ -369,7 +369,7 @@ const UpsertPatientForm = ({
           {/* Endereço Obrigatório */}
           <div className="space-y-4 rounded-md border p-4">
             <h4 className="font-semibold">Endereço</h4>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
                 name="zipCode"
@@ -405,7 +405,7 @@ const UpsertPatientForm = ({
                 )}
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
                 name="number"
@@ -450,7 +450,7 @@ const UpsertPatientForm = ({
                 )}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="city"
@@ -514,7 +514,7 @@ const UpsertPatientForm = ({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
                 name="responsibleCpf"

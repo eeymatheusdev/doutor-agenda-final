@@ -114,11 +114,11 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
           totalPatients={totalPatients.total}
           totalDoctors={totalDoctors.total}
         />
-        <div className="grid grid-cols-[2.25fr_1fr] gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2.25fr_1fr]">
           <AppointmentsChart dailyAppointmentsData={dailyAppointmentsData} />
           <TopDoctors doctors={topDoctors} />
         </div>
-        <div className="grid grid-cols-[2.25fr_1fr] gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2.25fr_1fr]">
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">

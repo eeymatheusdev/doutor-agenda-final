@@ -186,7 +186,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
             <Settings className="size-5" />
             Dados Gerais
           </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField
               control={form.control}
               name="name"
@@ -242,7 +242,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
         <Separator />
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Responsável Técnico</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField
               control={form.control}
               name="responsibleName"
@@ -345,7 +345,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
         <Separator />
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Contato e Endereço</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField
               control={form.control}
               name="phone"
@@ -406,7 +406,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
           </div>
 
           {/* Endereço */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <FormField
               control={form.control}
               name="addressZipcode"
@@ -443,7 +443,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
               )}
             />
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <FormField
               control={form.control}
               name="addressNumber"
@@ -484,7 +484,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
               )}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="addressCity"

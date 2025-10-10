@@ -1,3 +1,4 @@
+// src/app/(protected)/patients/_components/anamnesis/anamnesis-history.tsx
 "use client";
 
 import { format } from "date-fns";
@@ -16,14 +17,8 @@ import {
 
 import { useAnamnesis } from "./anamnesis-context";
 
-interface AnamnesisHistoryProps {
-  patientId: string;
-}
-
-/**
- * Componente para exibir o histórico de versões da Anamnese.
- */
-export default function AnamnesisHistory({ patientId }: AnamnesisHistoryProps) {
+// A prop patientId foi removida
+export default function AnamnesisHistory() {
   const {
     allAnamnesisRecords,
     loadRecordToCanvas,
@@ -118,7 +113,6 @@ export default function AnamnesisHistory({ patientId }: AnamnesisHistoryProps) {
                     </TooltipContent>
                   </Tooltip>
 
-                  {/* Botão de Exportar/Imprimir (Funcionalidade futura) */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" disabled>
@@ -137,7 +131,6 @@ export default function AnamnesisHistory({ patientId }: AnamnesisHistoryProps) {
                   {record.status.charAt(0).toUpperCase() +
                     record.status.slice(1)}
                 </Badge>
-                {/* Aqui está o resumo para a listagem */}
                 <Badge variant="outline" className="text-xs">
                   {record.summary}
                 </Badge>

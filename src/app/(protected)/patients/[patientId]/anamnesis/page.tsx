@@ -1,3 +1,4 @@
+// src/app/(protected)/patients/[patientId]/anamnesis/page.tsx
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -15,8 +16,7 @@ import { db } from "@/db";
 import { patientsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
-import AnamnesisCanvas from "../../_components/anamnesis/anamnesis-canvas";
-import AnamnesisHistory from "../../_components/anamnesis/anamnesis-history";
+import AnamnesisView from "./_components/anamnesis-view"; // Importe o novo componente
 
 interface Props {
   params: Promise<{ patientId: string }>;
@@ -55,10 +55,8 @@ export default async function AnamnesisPage({ params: paramsPromise }: Props) {
         </PageHeaderContent>
       </PageHeader>
       <PageContent>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
-          <AnamnesisCanvas patientId={params.patientId} />
-          <AnamnesisHistory patientId={params.patientId} />
-        </div>
+        {/* Use o novo componente wrapper que é um Client Component */}
+        <AnamnesisView patientId={params.patientId} />
       </PageContent>
     </PageContainer>
   );
