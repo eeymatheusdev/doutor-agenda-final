@@ -166,23 +166,25 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut />
+                  {session.data?.user?.clinic?.id && (
+                    <EditClinicDialog>
+                      <DropdownMenuItem
+                        onSelect={(e) => e.preventDefault()}
+                        className="gap-2"
+                      >
+                        <Settings className="size-4" />
+                        Editar Clínica
+                      </DropdownMenuItem>
+                    </EditClinicDialog>
+                  )}
+                  <DropdownMenuItem onClick={handleSignOut} className="gap-2">
+                    <LogOut className="size-4" />
                     Sair
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
-
-          {/* Botão de Edição da Clínica */}
-          {session.data?.user?.clinic?.id && (
-            <div className="flex h-12 items-center justify-center pl-2">
-              {" "}
-              {/* Container para alinhar com o botão da sidebar */}
-              <EditClinicDialog />
-            </div>
-          )}
         </div>
       </SidebarFooter>
     </Sidebar>

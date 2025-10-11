@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { getClinic } from "@/actions/clinic/get-clinic";
 import UpsertClinicForm from "@/app/(protected)/clinics/_components/upsert-clinic-form"; // Criação futura
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,12 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useSidebar } from "@/components/ui/sidebar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 // Tipo de dados esperado (mantido inalterado)
 export interface ClinicData {
@@ -50,11 +43,10 @@ export interface ClinicData {
   updatedAt: Date;
 }
 
-export function EditClinicDialog() {
+export function EditClinicDialog({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [clinicData, setClinicData] = React.useState<ClinicData | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
-  const { isMobile, state } = useSidebar();
 
   const handleOpen = async (open: boolean) => {
     setIsOpen(open);
@@ -84,29 +76,9 @@ export function EditClinicDialog() {
     }
   };
 
-  const isCollapsed = state === "collapsed" && !isMobile;
-
-  // SIMPLIFICAÇÃO: O ButtonContent não precisa de lógica de tooltip;
-  // o wrapper <Tooltip> já cuida disso.
-  const ButtonContent = (
-    <Button variant="ghost" size="icon" disabled={isLoading}>
-      <Settings className="size-4" />
-      <span className="sr-only">Editar Clínica</span>
-    </Button>
-  );
-
   return (
     <Dialog open={isOpen} onOpenChange={handleOpen}>
-      <Tooltip delayDuration={50}>
-        <TooltipTrigger asChild>
-          {/* O DialogTrigger envolve o botão */}
-          <DialogTrigger asChild>{ButtonContent}</DialogTrigger>
-        </TooltipTrigger>
-        {/* O TooltipContent aparece apenas quando a sidebar está colapsada no desktop */}
-        <TooltipContent side="right" hidden={!isCollapsed}>
-          Editar Clínica
-        </TooltipContent>
-      </Tooltip>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>
