@@ -89,8 +89,8 @@ export function AppSidebar() {
         <Image
           src="/logofundotransparente.png"
           alt="Doutor Agenda"
-          width={136}
-          height={28}
+          width={613}
+          height={125}
         />
       </SidebarHeader>
       <SidebarContent>
