@@ -16,7 +16,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EditClinicDialog } from "@/components/ui/clinic/edit-clinic-dialog"; // NOVO IMPORT
 import {
   DropdownMenu,
@@ -141,10 +141,16 @@ export function AppSidebar() {
                     {" "}
                     {/* Adicionado flex-1 */}
                     <Avatar>
+                      <AvatarImage
+                        src={session.data?.user.clinic?.logoUrl || ""}
+                        alt={
+                          session.data?.user.clinic?.name || "Logo da clínica"
+                        }
+                      />
                       <AvatarFallback>
-                        {session.data?.user.name
-                          ? session.data.user.name[0]
-                          : "U"}
+                        {session.data?.user.clinic?.name
+                          ? session.data.user.clinic.name[0]
+                          : "C"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="overflow-hidden text-left">

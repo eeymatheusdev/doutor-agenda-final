@@ -44,6 +44,7 @@ export const auth = betterAuth({
             ? {
                 id: clinic?.clinicId,
                 name: clinic?.clinic?.name,
+                logoUrl: clinic?.clinic?.logoUrl,
               }
             : undefined,
         },
