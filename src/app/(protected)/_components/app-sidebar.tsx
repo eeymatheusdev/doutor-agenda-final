@@ -87,7 +87,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b p-4">
         <Image
-          src="/public/logofundotransparente.png"
+          src="/logofundotransparente.png"
           alt="Doutor Agenda"
           width={136}
           height={28}
