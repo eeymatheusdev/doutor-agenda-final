@@ -1,22 +1,25 @@
-// src/app/(protected)/clinics/_components/upsert-clinic-form.tsx
+// src/app/(protected)/clinic-form/_components/upsert-clinic-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Settings, XIcon } from "lucide-react"; // <--- AQUI
+import { Loader2, Settings, XIcon } from "lucide-react";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useAction } from "next-safe-action/hooks";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { PatternFormat } from "react-number-format";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import {
-  UpdateClinicSchema,
-  updateClinicSchema,
+  UpsertClinicSchema,
+  upsertClinicSchema,
 } from "@/actions/clinic/schema";
-import { updateClinic } from "@/actions/clinic/update-clinic";
+import { upsertClinic } from "@/actions/clinic/upsert-clinic";
+import {
+  brazilianStates,
+  dentalSpecialties,
+} from "@/app/(protected)/doctors/_constants";
 import { Button } from "@/components/ui/button";
-import { ClinicData } from "@/components/ui/clinic/edit-clinic-dialog"; // Importa o tipo
 import { DialogFooter } from "@/components/ui/dialog";
 import {
   Form,
@@ -39,68 +42,94 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
-import { brazilianStates, dentalSpecialties } from "../../doctors/_constants";
+export interface ClinicData {
+  id: string;
+  name: string;
+  cnpj: string | null;
+  inscricaoEstadual: string | null;
+  responsibleName: string | null;
+  croResponsavel: string | null;
+  specialties: string[] | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  addressStreet: string | null;
+  addressNumber: string | null;
+  addressComplement: string | null;
+  addressNeighborhood: string | null;
+  addressCity: string | null;
+  addressState: string | null;
+  addressZipcode: string | null;
+  googleMapsUrl: string | null;
+  openingHours: Record<string, string> | null;
+  paymentMethods: string[] | null;
+  logoUrl: string | null;
+  notes: string | null;
+}
 
 interface UpsertClinicFormProps {
-  clinicData: ClinicData;
+  clinicData: ClinicData | null;
   onSuccess?: () => void;
 }
 
-// Helper para converter string vazia para null (aplica a lógica DRY)
 const nullableString = (value: string | null | undefined) =>
   value === "" ? null : value;
 
 const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
-  // Converte a lista de especialidades para o formato de formulário (string[])
-  const defaultSpecialties = clinicData.specialties?.map((s) => s) ?? [];
-  const defaultPaymentMethods = clinicData.paymentMethods?.map((p) => p) ?? [];
+  const isEditing = !!clinicData;
 
-  const defaultValues: UpdateClinicSchema = {
-    id: clinicData.id,
-    name: clinicData.name ?? "",
-    cnpj: clinicData.cnpj ?? "",
-    inscricaoEstadual: clinicData.inscricaoEstadual ?? "",
-    responsibleName: clinicData.responsibleName ?? "",
-    croResponsavel: clinicData.croResponsavel ?? "",
-    specialties:
-      defaultSpecialties.length > 0 ? (defaultSpecialties as any) : undefined,
-    phone: clinicData.phone ?? "",
-    email: clinicData.email ?? "",
-    website: clinicData.website ?? "",
-    addressStreet: clinicData.addressStreet ?? "",
-    addressNumber: clinicData.addressNumber ?? "",
-    addressComplement: clinicData.addressComplement ?? "",
-    addressNeighborhood: clinicData.addressNeighborhood ?? "",
-    addressCity: clinicData.addressCity ?? "",
-    addressState: (clinicData.addressState as any) ?? undefined,
-    addressZipcode: clinicData.addressZipcode ?? "",
-    googleMapsUrl: clinicData.googleMapsUrl ?? "",
-    openingHours: clinicData.openingHours ?? undefined,
-    paymentMethods:
-      defaultPaymentMethods.length > 0 ? defaultPaymentMethods : undefined,
-    logoUrl: clinicData.logoUrl ?? "",
-    notes: clinicData.notes ?? "",
+  const defaultValues: UpsertClinicSchema = {
+    id: clinicData?.id,
+    name: clinicData?.name ?? "",
+    cnpj: clinicData?.cnpj ?? "",
+    inscricaoEstadual: clinicData?.inscricaoEstadual ?? "",
+    responsibleName: clinicData?.responsibleName ?? "",
+    croResponsavel: clinicData?.croResponsavel ?? "",
+    specialties: (clinicData?.specialties as any) ?? [],
+    phone: clinicData?.phone ?? "",
+    email: clinicData?.email ?? "",
+    website: clinicData?.website ?? "",
+    addressStreet: clinicData?.addressStreet ?? "",
+    addressNumber: clinicData?.addressNumber ?? "",
+    addressComplement: clinicData?.addressComplement ?? "",
+    addressNeighborhood: clinicData?.addressNeighborhood ?? "",
+    addressCity: clinicData?.addressCity ?? "",
+    addressState: (clinicData?.addressState as any) ?? undefined,
+    addressZipcode: clinicData?.addressZipcode ?? "",
+    googleMapsUrl: clinicData?.googleMapsUrl ?? "",
+    openingHours: clinicData?.openingHours ?? undefined,
+    paymentMethods: clinicData?.paymentMethods ?? [],
+    logoUrl: clinicData?.logoUrl ?? "",
+    notes: clinicData?.notes ?? "",
   };
 
-  const form = useForm<UpdateClinicSchema>({
-    resolver: zodResolver(updateClinicSchema),
+  const form = useForm<UpsertClinicSchema>({
+    resolver: zodResolver(upsertClinicSchema),
     defaultValues: defaultValues as any,
   });
 
-  const updateClinicAction = useAction(updateClinic, {
+  const upsertClinicAction = useAction(upsertClinic, {
     onSuccess: () => {
-      toast.success("Dados da clínica atualizados com sucesso.");
+      toast.success(
+        isEditing
+          ? "Dados da clínica atualizados!"
+          : "Clínica criada com sucesso!",
+      );
       onSuccess?.();
     },
     onError: (error) => {
+      if (isRedirectError(error)) return;
       console.error(error);
-      toast.error("Erro ao atualizar dados da clínica.");
+      toast.error(
+        isEditing
+          ? "Erro ao atualizar dados da clínica."
+          : "Erro ao criar clínica.",
+      );
     },
   });
 
-  const onSubmit = (values: UpdateClinicSchema) => {
-    // Coerção para null de strings vazias para campos opcionais
-    const transformedValues: UpdateClinicSchema = {
+  const onSubmit = (values: UpsertClinicSchema) => {
+    const transformedValues: UpsertClinicSchema = {
       ...values,
       cnpj: nullableString(values.cnpj),
       inscricaoEstadual: nullableString(values.inscricaoEstadual),
@@ -114,7 +143,6 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
       googleMapsUrl: nullableString(values.googleMapsUrl),
       logoUrl: nullableString(values.logoUrl),
       notes: nullableString(values.notes),
-      // Transforma arrays vazios (provenientes de umselected no multi-select) para undefined se for opcional
       specialties:
         values.specialties && values.specialties.length > 0
           ? values.specialties
@@ -125,12 +153,11 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
           : null,
     };
 
-    updateClinicAction.execute(transformedValues);
+    upsertClinicAction.execute(transformedValues);
   };
 
   const selectedSpecialties = form.watch("specialties") ?? [];
 
-  // Função para gerenciar a seleção múltipla de especialidades
   const handleSpecialtyChange = (value: string) => {
     const specialties = form.getValues("specialties") || [];
     const specialtyValue = value as (typeof dentalSpecialties)[number]["value"];
@@ -157,7 +184,6 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
 
   const selectedPaymentMethods = form.watch("paymentMethods") ?? [];
 
-  // Função para gerenciar a seleção múltipla de métodos de pagamento
   const handlePaymentMethodChange = (value: string) => {
     const paymentMethods = form.getValues("paymentMethods") || [];
 
@@ -178,7 +204,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="max-h-[70vh] space-y-6 overflow-y-auto px-1 pr-4" // Adiciona scroll ao formulário
+        className="max-h-[70vh] space-y-6 overflow-y-auto px-1 pr-4"
       >
         {/* ======================= DADOS GERAIS ======================= */}
         <div className="space-y-4">
@@ -654,14 +680,16 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
         </div>
 
         <DialogFooter>
-          <Button type="submit" disabled={updateClinicAction.isPending}>
-            {updateClinicAction.isPending ? (
+          <Button type="submit" disabled={upsertClinicAction.isPending}>
+            {upsertClinicAction.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Salvando...
+                {isEditing ? "Salvando..." : "Criando..."}
               </>
-            ) : (
+            ) : isEditing ? (
               "Salvar Alterações"
+            ) : (
+              "Criar Clínica"
             )}
           </Button>
         </DialogFooter>

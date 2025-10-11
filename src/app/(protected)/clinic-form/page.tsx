@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getClinic } from "@/actions/clinic/get-clinic";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { auth } from "@/lib/auth";
 
-import ClinicForm from "./_components/form";
+import UpsertClinicForm from "./_components/upsert-clinic-form";
 
 const ClinicFormPage = async () => {
   const session = await auth.api.getSession({
@@ -22,17 +23,26 @@ const ClinicFormPage = async () => {
   if (!session.user.plan) {
     redirect("/new-subscription");
   }
+
+  // Se o usuário já tem uma clínica, ele não deveria estar aqui,
+  // a menos que seja para editar. Mas esta rota é para criação inicial.
+  if (session.user.clinic) {
+    redirect("/dashboard");
+  }
+
   return (
     <div>
       <Dialog open>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
-            <DialogTitle>Adicionar clínica</DialogTitle>
+            <DialogTitle>Cadastrar sua Clínica</DialogTitle>
             <DialogDescription>
-              Adicione uma clínica para continuar.
+              Preencha as informações da sua clínica para começar a usar o
+              sistema.
             </DialogDescription>
           </DialogHeader>
-          <ClinicForm />
+          {/* Passamos `null` para indicar que é um formulário de criação */}
+          <UpsertClinicForm clinicData={null} />
         </DialogContent>
       </Dialog>
     </div>

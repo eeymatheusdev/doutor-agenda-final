@@ -23,8 +23,8 @@ const phoneRegex = /^\(\d{2}\) \d{5}-\d{4}$/;
 // CEP: 99999-999 (9 caracteres)
 const zipCodeRegex = /^\d{5}-\d{3}$/;
 
-export const updateClinicSchema = z.object({
-  id: z.string().uuid(), // ID obrigatório para update
+export const upsertClinicSchema = z.object({
+  id: z.string().uuid().optional(), // ID agora é opcional
 
   // Identificação
   name: z.string().trim().min(1, "Nome da clínica é obrigatório."),
@@ -96,4 +96,4 @@ export const updateClinicSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
-export type UpdateClinicSchema = z.infer<typeof updateClinicSchema>;
+export type UpsertClinicSchema = z.infer<typeof upsertClinicSchema>;

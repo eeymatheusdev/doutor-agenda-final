@@ -1,23 +1,32 @@
-// eeymatheusdev/doutor-agenda-final/doutor-agenda-final-c7f670c00b38f056215f1fa2b1f490cb43ea870a/src/app/(protected)/_components/app-sidebar.tsx
-
 "use client";
 
 import {
   CalendarDays,
+  DollarSign,
   Gem,
   LayoutDashboard,
   LogOut,
-  Settings, // Importa Settings para uso futuro/direto
+  Settings,
   Stethoscope,
   UsersRound,
 } from "lucide-react";
-import { DollarSign } from "lucide-react"; // Novo ícone
+import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import * as React from "react";
+import { toast } from "sonner";
 
+import { getClinic } from "@/actions/clinic/get-clinic";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { EditClinicDialog } from "@/components/ui/clinic/edit-clinic-dialog"; // NOVO IMPORT
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,51 +47,55 @@ import {
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 
+import UpsertClinicForm, {
+  ClinicData,
+} from "../clinic-form/_components/upsert-clinic-form";
+
 const items = [
-  // ... itens existentes
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Agendamentos",
-    url: "/appointments",
-    icon: CalendarDays,
-  },
-  {
-    title: "Médicos",
-    url: "/doctors",
-    icon: Stethoscope,
-  },
-  {
-    title: "Pacientes",
-    url: "/patients",
-    icon: UsersRound,
-  },
-  {
-    // Novo item
-    title: "Financeiro",
-    url: "/financials",
-    icon: DollarSign,
-  },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Agendamentos", url: "/appointments", icon: CalendarDays },
+  { title: "Médicos", url: "/doctors", icon: Stethoscope },
+  { title: "Pacientes", url: "/patients", icon: UsersRound },
+  { title: "Financeiro", url: "/financials", icon: DollarSign },
 ];
 
 export function AppSidebar() {
   const router = useRouter();
   const session = authClient.useSession();
   const pathname = usePathname();
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [clinicData, setClinicData] = React.useState<ClinicData | null>(null);
+  const [isLoadingClinic, setIsLoadingClinic] = React.useState(false);
 
   const handleSignOut = async () => {
-    // ... lógica de logout
     await authClient.signOut({
       fetchOptions: {
-        onSuccess: () => {
-          router.push("/authentication");
-        },
+        onSuccess: () => router.push("/authentication"),
       },
     });
   };
+
+  const handleOpenEditDialog = async (open: boolean) => {
+    setIsEditDialogOpen(open);
+    if (open && !clinicData) {
+      setIsLoadingClinic(true);
+      try {
+        const result = await getClinic();
+        if (result && "data" in result) {
+          setClinicData(result.data as ClinicData);
+        } else {
+          toast.error("Erro ao carregar dados da clínica.");
+          setIsEditDialogOpen(false);
+        }
+      } catch (error) {
+        toast.error("Erro ao carregar dados da clínica.");
+        setIsEditDialogOpen(false);
+      } finally {
+        setIsLoadingClinic(false);
+      }
+    }
+  };
+
   return (
     <Sidebar>
       <SidebarHeader className="border-b p-4">
@@ -131,61 +144,67 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex w-full items-center justify-between">
-          {/* Menu de Usuário/Clínica */}
-          <SidebarMenu className="flex-1">
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton size="lg" className="flex-1">
-                    {" "}
-                    {/* Adicionado flex-1 */}
-                    <Avatar>
-                      <AvatarImage
-                        src={session.data?.user.clinic?.logoUrl || ""}
-                        alt={
-                          session.data?.user.clinic?.name || "Logo da clínica"
-                        }
-                      />
-                      <AvatarFallback>
-                        {session.data?.user.clinic?.name
-                          ? session.data.user.clinic.name[0]
-                          : "C"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="overflow-hidden text-left">
-                      {" "}
-                      {/* Adicionado overflow-hidden */}
-                      <p className="truncate text-sm">
-                        {session.data?.user?.clinic?.name || "Sem Clínica"}
-                      </p>
-                      <p className="text-muted-foreground truncate text-sm">
-                        {session.data?.user.email}
-                      </p>
-                    </div>
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {session.data?.user?.clinic?.id && (
-                    <EditClinicDialog>
-                      <DropdownMenuItem
-                        onSelect={(e) => e.preventDefault()}
-                        className="gap-2"
-                      >
-                        <Settings className="size-4" />
-                        Editar Clínica
-                      </DropdownMenuItem>
-                    </EditClinicDialog>
-                  )}
-                  <DropdownMenuItem onClick={handleSignOut} className="gap-2">
-                    <LogOut className="size-4" />
-                    Sair
+        <Dialog open={isEditDialogOpen} onOpenChange={handleOpenEditDialog}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuButton size="lg" className="w-full">
+                <Avatar>
+                  <AvatarImage
+                    src={session.data?.user.clinic?.logoUrl || ""}
+                    alt={session.data?.user.clinic?.name || "Logo"}
+                  />
+                  <AvatarFallback>
+                    {session.data?.user.clinic?.name?.[0] ?? "C"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="overflow-hidden text-left">
+                  <p className="truncate text-sm">
+                    {session.data?.user?.clinic?.name || "Sem Clínica"}
+                  </p>
+                  <p className="text-muted-foreground truncate text-sm">
+                    {session.data?.user.email}
+                  </p>
+                </div>
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {session.data?.user?.clinic?.id && (
+                <DialogTrigger asChild>
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    <Settings className="mr-2 size-4" />
+                    Editar Clínica
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </div>
+                </DialogTrigger>
+              )}
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut className="mr-2 size-4" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DialogContent className="sm:max-w-[700px]">
+            <DialogHeader>
+              <DialogTitle>
+                {clinicData?.name
+                  ? `Editar ${clinicData.name}`
+                  : "Carregando..."}
+              </DialogTitle>
+              <DialogDescription>
+                Atualize as informações da sua clínica.
+              </DialogDescription>
+            </DialogHeader>
+            {isLoadingClinic ? (
+              <div className="flex h-40 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : clinicData ? (
+              <UpsertClinicForm
+                clinicData={clinicData}
+                onSuccess={() => handleOpenEditDialog(false)}
+              />
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </SidebarFooter>
     </Sidebar>
   );
