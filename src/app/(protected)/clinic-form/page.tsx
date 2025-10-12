@@ -1,7 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getClinic } from "@/actions/clinic/get-clinic";
 import {
   Dialog,
   DialogContent,
@@ -23,9 +22,6 @@ const ClinicFormPage = async () => {
   if (!session.user.plan) {
     redirect("/new-subscription");
   }
-
-  // Se o usuário já tem uma clínica, ele não deveria estar aqui,
-  // a menos que seja para editar. Mas esta rota é para criação inicial.
   if (session.user.clinic) {
     redirect("/dashboard");
   }
@@ -41,7 +37,6 @@ const ClinicFormPage = async () => {
               sistema.
             </DialogDescription>
           </DialogHeader>
-          {/* Passamos `null` para indicar que é um formulário de criação */}
           <UpsertClinicForm clinicData={null} />
         </DialogContent>
       </Dialog>

@@ -258,40 +258,56 @@ export const clinicFinancialStatusEnum = pgEnum("clinic_financial_status", [
   "overdue",
 ]);
 
+export const clinicPaymentMethodsEnum = pgEnum("clinic_payment_methods", [
+  "Dinheiro Em Espécie",
+  "Cartão De Débito",
+  "Cartão De Crédito",
+  "Cartão Pré-Pago",
+  "Boleto Bancário",
+  "Pix",
+  "Transferência TED",
+  "Transferência DOC",
+  "Transferência Entre Contas Do Mesmo Banco",
+  "Débito Automático",
+  "Carterias Digitais",
+  "Pagamento Via QR Code",
+  "Convênios / Carnês",
+  "Saque / Pagamento Em Espécie",
+  "Pagamento Recorrente / Assinatura",
+  "Financiamento Ou Crédito Direto",
+  "Cheque",
+  "Depósito Bancário",
+]);
+
 export const patientSexEnum = pgEnum("patient_sex", ["male", "female"]);
 
 export const clinicsTable = pgTable("clinics", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
+  cnpj: text("cnpj"),
+  stateBusinessRegistration: text("state_business_registration"),
+  responsibleName: text("responsible_name").notNull(),
+  croResponsavel: text("cro_responsavel").notNull(),
+  paymentMethods: clinicPaymentMethodsEnum("payment_methods").array().notNull(),
+  logoUrl: text("logo_url"),
+  observations: text("observations"),
+
+  phone: text("phone"),
+  whatsApp: text("whatsApp"),
+  email: text("email"),
+  website: text("website"),
+  addressStreet: text("address_street").notNull(),
+  addressNumber: text("address_number").notNull(),
+  addressComplement: text("address_complement"),
+  addressNeighborhood: text("address_neighborhood").notNull(),
+  addressCity: text("address_city").notNull(),
+  addressState: brazilianStateEnum("address_state").notNull(),
+  addressZipcode: text("address_zipcode").notNull(),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date()),
-  // NOVO: Campos de Identificação
-  cnpj: varchar("cnpj", { length: 18 }), // 00.000.000/0000-00
-  inscricaoEstadual: varchar("inscricao_estadual", { length: 30 }),
-  responsibleName: varchar("responsible_name", { length: 100 }),
-  croResponsavel: varchar("cro_responsavel", { length: 20 }),
-  specialties: dentalSpecialtyEnum("specialties").array(),
-
-  // NOVO: Campos de Contato e Localização
-  phone: varchar("phone", { length: 20 }), // (99) 99999-9999
-  email: varchar("email", { length: 150 }),
-  website: varchar("website", { length: 150 }),
-  addressStreet: varchar("address_street", { length: 150 }),
-  addressNumber: varchar("address_number", { length: 10 }),
-  addressComplement: varchar("address_complement", { length: 100 }),
-  addressNeighborhood: varchar("address_neighborhood", { length: 100 }),
-  addressCity: varchar("address_city", { length: 100 }),
-  addressState: brazilianStateEnum("address_state"),
-  addressZipcode: varchar("address_zipcode", { length: 10 }), // 99999-999
-  googleMapsUrl: text("google_maps_url"),
-
-  // NOVO: Informações Administrativas
-  openingHours: jsonb("opening_hours").$type<Record<string, string>>(),
-  paymentMethods: text("payment_methods").array(),
-  logoUrl: text("logo_url"),
-  notes: text("notes"),
 });
 
 export const usersToClinicsTable = pgTable("users_to_clinics", {

@@ -27,7 +27,6 @@ export const upsertClinic = actionClient
     const { id, ...clinicData } = parsedInput;
 
     if (id) {
-      // --- LÓGICA DE ATUALIZAÇÃO ---
       if (id !== session.user.clinic?.id) {
         throw new Error("Você não tem permissão para editar esta clínica.");
       }
@@ -37,10 +36,8 @@ export const upsertClinic = actionClient
         .set(clinicData)
         .where(eq(clinicsTable.id, id));
 
-      // Revalida paths para refletir mudanças (ex: nome na sidebar)
       revalidatePath("/", "layout");
     } else {
-      // --- LÓGICA DE CRIAÇÃO ---
       if (session.user.clinic) {
         throw new Error("Usuário já possui uma clínica associada.");
       }
@@ -55,7 +52,6 @@ export const upsertClinic = actionClient
         clinicId: newClinic.id,
       });
 
-      // Redireciona para o dashboard após a criação
       redirect("/dashboard");
     }
 

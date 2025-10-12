@@ -4,7 +4,7 @@
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 
-import { DentalSpecialty } from "@/app/(protected)/doctors/_constants"; // Importa o tipo correto
+import { ClinicPaymentMethod } from "@/app/(protected)/clinic-form/_constants";
 import { db } from "@/db";
 import { clinicsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -27,13 +27,11 @@ export const getClinic = actionClient.action(async () => {
     throw new Error("Clínica não encontrada.");
   }
 
-  // CORREÇÃO: Usa o tipo literal DentalSpecialty no predicado.
-  // Isso resolve o erro de tipagem.
-  const cleanedSpecialties =
-    clinic.specialties?.filter((s): s is DentalSpecialty => !!s) ?? [];
+  const cleanedPaymentMethods =
+    clinic.paymentMethods?.filter((s): s is ClinicPaymentMethod => !!s) ?? [];
 
   return {
     ...clinic,
-    specialties: cleanedSpecialties,
+    paymentMethods: cleanedPaymentMethods,
   };
 });
