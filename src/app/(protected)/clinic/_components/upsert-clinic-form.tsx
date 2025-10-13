@@ -174,12 +174,12 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
           <h3 className="flex items-center gap-2 text-lg font-semibold">
             Dados Gerais
           </h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-2">
                   <FormLabel>Nome da Clínica</FormLabel>
                   <FormControl>
                     <Input {...field} />
@@ -210,31 +210,31 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="stateBusinessRegistration"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Inscrição Estadual</FormLabel>
-                  <FormControl>
-                    <Input {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
+          <FormField
+            control={form.control}
+            name="stateBusinessRegistration"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Inscrição Estadual</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <Separator />
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Responsável Técnico</h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <FormField
               control={form.control}
               name="responsibleName"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-2">
                   <FormLabel>Nome do Responsável</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ""} />
@@ -369,95 +369,13 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
         <Separator />
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Contato e Endereço</h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefone</FormLabel>
-                  <FormControl>
-                    <PatternFormat
-                      format="(##) #####-####"
-                      mask="_"
-                      placeholder="(11) 99999-9999"
-                      value={field.value ?? ""}
-                      onValueChange={(value) => {
-                        field.onChange(value.value);
-                      }}
-                      customInput={Input}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="whatsApp"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>WhatsApp</FormLabel>
-                  <FormControl>
-                    <PatternFormat
-                      format="(##) #####-####"
-                      mask="_"
-                      placeholder="(11) 99999-9999"
-                      value={field.value ?? ""}
-                      onValueChange={(value) => {
-                        field.onChange(value.value);
-                      }}
-                      customInput={Input}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>E-mail</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="contato@clinica.com"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="website"
-              render={({ field }) => (
-                <FormItem className="sm:col-span-2">
-                  <FormLabel>Website (URL)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="https://www.suaclinica.com.br"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <FormField
               control={form.control}
               name="addressStreet"
               render={({ field }) => (
                 <FormItem className="col-span-2">
-                  <FormLabel>Rua/Avenida</FormLabel>
+                  <FormLabel>Rua / Avenida</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ""} />
                   </FormControl>
@@ -484,7 +402,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
               control={form.control}
               name="addressNeighborhood"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-2">
                   <FormLabel>Bairro</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ""} />
@@ -507,12 +425,12 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
               )}
             />
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <FormField
               control={form.control}
               name="addressCity"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-2">
                   <FormLabel>Cidade</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ""} />
@@ -525,7 +443,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
               control={form.control}
               name="addressState"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-1">
                   <FormLabel>Estado</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(value)}
@@ -533,7 +451,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione o Estado" />
+                        <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -552,13 +470,97 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
               control={form.control}
               name="addressZipcode"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-1">
                   <FormLabel>CEP</FormLabel>
                   <FormControl>
                     <PatternFormat
                       format="#####-###"
                       mask="_"
                       placeholder="00000-000"
+                      value={field.value ?? ""}
+                      onValueChange={(value) => {
+                        field.onChange(value.value);
+                      }}
+                      customInput={Input}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>E-mail</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="contato@clinica.com"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone</FormLabel>
+                  <FormControl>
+                    <PatternFormat
+                      format="(##) #####-####"
+                      mask="_"
+                      placeholder="(11) 99999-9999"
+                      value={field.value ?? ""}
+                      onValueChange={(value) => {
+                        field.onChange(value.value);
+                      }}
+                      customInput={Input}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField
+              control={form.control}
+              name="website"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Website (URL)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="https://www.suaclinica.com.br"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="whatsApp"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>WhatsApp</FormLabel>
+                  <FormControl>
+                    <PatternFormat
+                      format="(##) #####-####"
+                      mask="_"
+                      placeholder="(11) 99999-9999"
                       value={field.value ?? ""}
                       onValueChange={(value) => {
                         field.onChange(value.value);
