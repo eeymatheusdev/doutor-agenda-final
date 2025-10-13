@@ -104,9 +104,9 @@ export function SubscriptionPlanCard({
           )}
         </div>
         <CardDescription>{description}</CardDescription>
-        <div className="flex items-baseline">
+        <div className="flex items-end gap-1.5">
           <span className="text-3xl font-bold">{R$.format(price)}</span>
-          <span className="ml-1 text-gray-600">/ {interval}</span>
+          <span className="text-gray-600">/ {interval}</span>
         </div>
       </CardHeader>
 
