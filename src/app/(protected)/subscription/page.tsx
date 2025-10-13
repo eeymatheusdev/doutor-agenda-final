@@ -35,7 +35,7 @@ const plans = [
   {
     title: "Plano Semestral",
     description: "Economize com o plano de 6 meses.",
-    price: 2749.9 / 6, // Exibindo o preço mensal equivalente
+    price: 1449.9 / 6, // Exibindo o preço mensal equivalente
     interval: "mês (cobrado semestralmente)",
     priceId: process.env.STRIPE_SEMIANNUAL_PLAN_PRICE_ID!,
     planType: "semiannual" as const,
@@ -48,7 +48,7 @@ const plans = [
   {
     title: "Plano Anual",
     description: "O melhor custo-benefício.",
-    price: 2499.9 / 12, // Exibindo o preço mensal equivalente
+    price: 2799.9 / 12, // Exibindo o preço mensal equivalente
     interval: "mês (cobrado anualmente)",
     priceId: process.env.STRIPE_ANNUAL_PLAN_PRICE_ID!,
     planType: "annual" as const,
