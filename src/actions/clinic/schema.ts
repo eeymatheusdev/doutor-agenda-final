@@ -2,32 +2,27 @@
 import { z } from "zod";
 
 import { BrazilianState } from "@/app/(protected)/doctors/_constants";
-import { clinicFinancialStatusEnum } from "@/db/schema";
+import { clinicPaymentMethodsEnum } from "@/db/schema";
 
 const allBrazilianStates = Object.keys(BrazilianState) as [
   keyof typeof BrazilianState,
   ...(keyof typeof BrazilianState)[],
 ];
 
-const allClinicFinancialStatusEnum = clinicFinancialStatusEnum.enumValues as [
+const allClinicPaymentMethods = clinicPaymentMethodsEnum.enumValues as [
   string,
   ...string[],
 ];
 
-// Reutiliza a validação de CNPJ, Phone e CEP baseada nos padrões dos formulários existentes
-// CNPJ: 00.000.000/0000-00 (18 caracteres)
-const cnpjRegex = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
-// Phone: (99) 99999-9999 (15 caracteres)
-const phoneRegex = /^\(\d{2}\) \d{5}-\d{4}$/;
-// CEP: 99999-999 (9 caracteres)
-const zipCodeRegex = /^\d{5}-\d{3}$/;
-
 export const upsertClinicSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().uuid().optional(),
   name: z.string().trim().min(1, "Nome da clínica é obrigatório."),
   cnpj: z
     .string()
-    .regex(cnpjRegex, "CNPJ inválido (00.000.000/0000-00)")
+    .regex(
+      /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/,
+      "CNPJ inválido (00.000.000/0000-00)",
+    )
     .optional()
     .nullable(),
   stateBusinessRegistration: z.string().optional().nullable(),
@@ -37,19 +32,19 @@ export const upsertClinicSchema = z.object({
     .min(1, "Nome do responsável é obrigatório."),
   croResponsavel: z.string().trim().min(1, "CRO do responsável é obrigatório."),
   paymentMethods: z
-    .array(z.enum(allClinicFinancialStatusEnum as any))
+    .array(z.enum(allClinicPaymentMethods))
     .min(1, "Selecione pelo menos um método de pagamento."),
   logoUrl: z.string().url("URL inválida.").optional().nullable(),
   observations: z.string().optional().nullable(),
 
   phone: z
     .string()
-    .regex(phoneRegex, "Telefone inválido ((99) 99999-9999)")
+    .regex(/^\(\d{2}\) \d{5}-\d{4}$/, "Telefone inválido ((99) 99999-9999)")
     .optional()
     .nullable(),
   whatsApp: z
     .string()
-    .regex(phoneRegex, "WhatsApp inválido ((99) 99999-9999)")
+    .regex(/^\(\d{2}\) \d{5}-\d{4}$/, "WhatsApp inválido ((99) 99999-9999)")
     .optional()
     .nullable(),
   email: z.string().email("E-mail inválido.").optional().nullable(),
@@ -62,7 +57,7 @@ export const upsertClinicSchema = z.object({
   addressState: z.enum(allBrazilianStates, {
     required_error: "Estado é obrigatório.",
   }),
-  addressZipcode: z.string().regex(zipCodeRegex, "CEP inválido (99999-999)"),
+  addressZipcode: z.string().regex(/^\d{5}-\d{3}$/, "CEP inválido (99999-999)"),
 });
 
 export type UpsertClinicSchema = z.infer<typeof upsertClinicSchema>;

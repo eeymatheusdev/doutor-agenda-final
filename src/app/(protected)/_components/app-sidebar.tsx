@@ -49,7 +49,7 @@ import { authClient } from "@/lib/auth-client";
 
 import UpsertClinicForm, {
   ClinicData,
-} from "../clinic-form/_components/upsert-clinic-form";
+} from "../clinic/_components/upsert-clinic-form";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },

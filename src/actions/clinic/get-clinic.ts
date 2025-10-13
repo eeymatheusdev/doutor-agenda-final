@@ -4,7 +4,7 @@
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 
-import { ClinicPaymentMethod } from "@/app/(protected)/clinic-form/_constants";
+import { ClinicPaymentMethod } from "@/app/(protected)/clinic/_constants";
 import { db } from "@/db";
 import { clinicsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -27,11 +27,10 @@ export const getClinic = actionClient.action(async () => {
     throw new Error("Clínica não encontrada.");
   }
 
-  const cleanedPaymentMethods =
-    clinic.paymentMethods?.filter((s): s is ClinicPaymentMethod => !!s) ?? [];
+  const cleanedPaymentMethods = clinic.paymentMethods?.filter(Boolean) ?? [];
 
   return {
     ...clinic,
-    paymentMethods: cleanedPaymentMethods,
+    paymentMethods: cleanedPaymentMethods as ClinicPaymentMethod[],
   };
 });

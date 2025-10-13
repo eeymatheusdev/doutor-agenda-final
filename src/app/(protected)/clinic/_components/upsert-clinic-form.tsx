@@ -15,11 +15,8 @@ import {
   upsertClinicSchema,
 } from "@/actions/clinic/schema";
 import { upsertClinic } from "@/actions/clinic/upsert-clinic";
-import { clinicPaymentMethods } from "@/app/(protected)/clinic-form/_constants";
-import {
-  brazilianStates,
-  dentalSpecialties,
-} from "@/app/(protected)/doctors/_constants";
+import { clinicPaymentMethods } from "@/app/(protected)/clinic/_constants";
+import { brazilianStates } from "@/app/(protected)/doctors/_constants";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import {

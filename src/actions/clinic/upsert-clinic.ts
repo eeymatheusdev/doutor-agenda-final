@@ -7,7 +7,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
-import { clinicsTable, usersToClinicsTable } from "@/db/schema";
+import {
+  clinicPaymentMethodsEnum,
+  clinicsTable,
+  usersToClinicsTable,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { actionClient } from "@/lib/next-safe-action";
 
@@ -26,6 +30,12 @@ export const upsertClinic = actionClient
 
     const { id, ...clinicData } = parsedInput;
 
+    const dataToUpsert = {
+      ...clinicData,
+      paymentMethods:
+        clinicData.paymentMethods as typeof clinicPaymentMethodsEnum.enumValues,
+    };
+
     if (id) {
       if (id !== session.user.clinic?.id) {
         throw new Error("Você não tem permissão para editar esta clínica.");
@@ -33,7 +43,7 @@ export const upsertClinic = actionClient
 
       await db
         .update(clinicsTable)
-        .set(clinicData)
+        .set(dataToUpsert)
         .where(eq(clinicsTable.id, id));
 
       revalidatePath("/", "layout");
@@ -44,7 +54,7 @@ export const upsertClinic = actionClient
 
       const [newClinic] = await db
         .insert(clinicsTable)
-        .values(clinicData)
+        .values(dataToUpsert)
         .returning();
 
       await db.insert(usersToClinicsTable).values({
