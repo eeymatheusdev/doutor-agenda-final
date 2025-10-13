@@ -40,7 +40,6 @@ export function SubscriptionPlanCard({
   interval,
   priceId,
   planType,
-  features,
   isCurrentPlan = false,
   userEmail,
   className,
@@ -111,18 +110,7 @@ export function SubscriptionPlanCard({
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col">
-        {features && features.length > 0 && (
-          <div className="flex-1 space-y-4 border-t pt-6">
-            {features.map((feature, index) => (
-              <div key={index} className="flex items-start">
-                <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-green-500" />
-                <p className="ml-3 text-gray-600">{feature}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-auto pt-8">
+        <div className="mt-auto">
           <Button
             className="w-full"
             variant={isCurrentPlan ? "outline" : "default"}

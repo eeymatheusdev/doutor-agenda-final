@@ -20,43 +20,25 @@ const plans = [
     title: "Plano Mensal",
     description: "Ideal para começar.",
     price: 249.9,
-    interval: "mês",
+    interval: "mensalmente",
     priceId: process.env.STRIPE_MONTHLY_PLAN_PRICE_ID!,
     planType: "monthly" as const,
-    features: [
-      "Cadastro ilimitado de médicos",
-      "Agendamentos ilimitados",
-      "Métricas completas",
-      "Cadastro ilimitado de pacientes",
-      "Confirmação via WhatsApp",
-      "Suporte prioritário",
-    ],
   },
   {
     title: "Plano Semestral",
     description: "Economize com o plano de 6 meses.",
-    price: 1449.9 / 6, // Exibindo o preço mensal equivalente
-    interval: "mês (cobrado semestralmente)",
+    price: 1449.9,
+    interval: "semestralmente",
     priceId: process.env.STRIPE_SEMIANNUAL_PLAN_PRICE_ID!,
     planType: "semiannual" as const,
-    features: [
-      "Todos os benefícios do plano Mensal",
-      "Desconto por pagamento antecipado",
-      "Acesso antecipado a novos recursos",
-    ],
   },
   {
     title: "Plano Anual",
     description: "O melhor custo-benefício.",
-    price: 2799.9 / 12, // Exibindo o preço mensal equivalente
-    interval: "mês (cobrado anualmente)",
+    price: 2799.9,
+    interval: "anualmente",
     priceId: process.env.STRIPE_ANNUAL_PLAN_PRICE_ID!,
     planType: "annual" as const,
-    features: [
-      "Todos os benefícios do plano Semestral",
-      "Maior desconto de todos",
-      "Consultoria de onboarding",
-    ],
   },
 ];
 
@@ -82,7 +64,7 @@ const SubscriptionPage = async () => {
         </PageHeaderContent>
       </PageHeader>
       <PageContent>
-        <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid w-full max-w-6xl grid-cols-1 items-stretch gap-8 md:grid-cols-2 lg:grid-cols-3">
           {plans.map((plan) => (
             <SubscriptionPlanCard
               key={plan.planType}
