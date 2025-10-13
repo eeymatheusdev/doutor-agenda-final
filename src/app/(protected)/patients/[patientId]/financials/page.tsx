@@ -33,7 +33,7 @@ export default async function PatientFinancialsPage({
     redirect("/authentication");
   }
   if (!session.user.clinic) {
-    redirect("/clinic-form");
+    redirect("/clinic");
   }
   if (!session.user.plan) {
     redirect("/new-subscription");

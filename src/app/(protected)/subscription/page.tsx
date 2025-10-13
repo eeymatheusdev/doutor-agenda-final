@@ -66,7 +66,7 @@ const SubscriptionPage = async () => {
     redirect("/authentication");
   }
   if (!session.user.clinic) {
-    redirect("/clinic-form");
+    redirect("/clinic");
   }
 
   return (

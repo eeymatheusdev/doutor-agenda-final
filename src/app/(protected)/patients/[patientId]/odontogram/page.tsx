@@ -31,7 +31,7 @@ export default async function OdontogramPage({ params: paramsPromise }: Props) {
     redirect("/authentication");
   }
   if (!session.user.clinic) {
-    redirect("/clinic-form");
+    redirect("/clinic");
   }
   if (!session.user.plan) {
     redirect("/new-subscription");

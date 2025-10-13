@@ -1,4 +1,3 @@
-// src/app/(protected)/clinic-form/_components/upsert-clinic-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
