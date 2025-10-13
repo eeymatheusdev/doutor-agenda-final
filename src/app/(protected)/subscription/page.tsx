@@ -1,3 +1,5 @@
+// src/app/(protected)/subscription/page.tsx
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -80,7 +82,7 @@ const SubscriptionPage = async () => {
         </PageHeaderContent>
       </PageHeader>
       <PageContent>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
           {plans.map((plan) => (
             <SubscriptionPlanCard
               key={plan.planType}

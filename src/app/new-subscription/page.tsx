@@ -54,7 +54,7 @@ export default async function NewSubscriptionPage() {
         </p>
       </div>
 
-      <div className="grid w-full max-w-5xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid w-full max-w-5xl grid-cols-1 items-stretch gap-8 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan) => (
           <SubscriptionPlanCard
             key={plan.planType}

@@ -122,7 +122,7 @@ export function SubscriptionPlanCard({
           </div>
         )}
 
-        <div className="mt-8">
+        <div className="mt-auto pt-8">
           <Button
             className="w-full"
             variant={isCurrentPlan ? "outline" : "default"}
