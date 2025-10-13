@@ -13,40 +13,22 @@ const plans = [
     interval: "mês",
     priceId: process.env.STRIPE_MONTHLY_PLAN_PRICE_ID!,
     planType: "monthly" as const,
-    features: [
-      "Cadastro ilimitado de médicos",
-      "Agendamentos ilimitados",
-      "Métricas completas",
-      "Cadastro ilimitado de pacientes",
-      "Confirmação via WhatsApp",
-      "Suporte prioritário",
-    ],
   },
   {
     title: "Plano Semestral",
     description: "Economize com o plano de 6 meses.",
-    price: 2749.9 / 6,
-    interval: "mês (cobrado semestralmente)",
+    price: 2749.9,
+    interval: "semestralmente",
     priceId: process.env.STRIPE_SEMIANNUAL_PLAN_PRICE_ID!,
     planType: "semiannual" as const,
-    features: [
-      "Todos os benefícios do plano Mensal",
-      "Desconto por pagamento antecipado",
-      "Acesso antecipado a novos recursos",
-    ],
   },
   {
     title: "Plano Anual",
     description: "O melhor custo-benefício.",
-    price: 2499.9 / 12,
-    interval: "mês (cobrado anualmente)",
+    price: 2499.9,
+    interval: "anualmente",
     priceId: process.env.STRIPE_ANNUAL_PLAN_PRICE_ID!,
     planType: "annual" as const,
-    features: [
-      "Todos os benefícios do plano Semestral",
-      "Maior desconto de todos",
-      "Consultoria de onboarding",
-    ],
   },
 ];
 
@@ -83,7 +65,7 @@ export default async function NewSubscriptionPage() {
       <div className="mt-8 max-w-lg text-center">
         <p className="text-sm text-gray-500">
           Junte-se a mais de 2.000 profissionais de saúde que já transformaram
-          sua rotina. Garantia de satisfação de 30 dias ou seu dinheiro de
+          sua rotina. Garantia de satisfação de 07 dias ou seu dinheiro de
           volta.
         </p>
       </div>
