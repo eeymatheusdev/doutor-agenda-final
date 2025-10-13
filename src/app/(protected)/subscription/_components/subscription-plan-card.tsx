@@ -1,10 +1,12 @@
+// src/app/(protected)/subscription/_components/subscription-plan-card.tsx
+
 "use client";
 
 import { loadStripe } from "@stripe/stripe-js";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
-import { toast } from "sonner"; // <-- ADICIONE ESTA LINHA
+import { toast } from "sonner";
 
 import { createStripeCheckout } from "@/actions/create-stripe-checkout";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +27,7 @@ interface SubscriptionPlanCardProps {
   interval: string;
   priceId: string;
   planType: "monthly" | "semiannual" | "annual";
-  features: string[];
+  features?: string[];
   isCurrentPlan?: boolean;
   userEmail: string;
   className?: string;
@@ -109,14 +111,16 @@ export function SubscriptionPlanCard({
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col">
-        <div className="flex-1 space-y-4 border-t pt-6">
-          {features.map((feature, index) => (
-            <div key={index} className="flex items-start">
-              <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-green-500" />
-              <p className="ml-3 text-gray-600">{feature}</p>
-            </div>
-          ))}
-        </div>
+        {features && features.length > 0 && (
+          <div className="flex-1 space-y-4 border-t pt-6">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-start">
+                <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-green-500" />
+                <p className="ml-3 text-gray-600">{feature}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-8">
           <Button
