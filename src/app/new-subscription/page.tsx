@@ -10,7 +10,7 @@ const plans = [
     title: "Plano Mensal",
     description: "Ideal para começar.",
     price: 249.9,
-    interval: "mês",
+    interval: "mensalmente",
     priceId: process.env.STRIPE_MONTHLY_PLAN_PRICE_ID!,
     planType: "monthly" as const,
   },
