@@ -36,6 +36,7 @@ export const POST = async (request: Request) => {
           subscription: string;
           metadata: {
             userId: string;
+            planType: "monthly" | "semiannual" | "annual"; // Adicionado planType
           };
         };
       };
@@ -47,12 +48,18 @@ export const POST = async (request: Request) => {
       if (!userId) {
         throw new Error("User ID not found");
       }
+      // Pega o tipo de plano dos metadados
+      const planType = subscription_details.metadata.planType;
+      if (!planType) {
+        throw new Error("Plan type not found in metadata");
+      }
+
       await db
         .update(usersTable)
         .set({
           stripeSubscriptionId: subscription,
           stripeCustomerId: customer,
-          plan: "essential",
+          plan: planType, // Salva o plano correto
         })
         .where(eq(usersTable.id, userId));
       break;
