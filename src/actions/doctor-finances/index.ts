@@ -33,18 +33,6 @@ async function updateDoctorFinancialStatus(doctorId: string, clinicId: string) {
       ),
     );
 
-  let newStatus: "adimplente" | "pendente" | "atrasado" = "adimplente";
-  if (Number(totals.overdueCommissions) > 0) {
-    newStatus = "atrasado";
-  } else if (Number(totals.pendingCommissions) > 0) {
-    newStatus = "pendente";
-  }
-
-  await db
-    .update(doctorsTable)
-    .set({ financialStatus: newStatus })
-    .where(eq(doctorsTable.id, doctorId));
-
   revalidatePath(`/doctors/${doctorId}/financials`);
   revalidatePath(`/doctors`);
 }

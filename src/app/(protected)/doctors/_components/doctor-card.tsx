@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  CalendarIcon,
-  ClockIcon,
-  DollarSignIcon,
-  Mail,
-  TrashIcon,
-} from "lucide-react";
-import Link from "next/link"; // Importar Link
+import { CalendarIcon, ClockIcon, Mail, TrashIcon } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -36,7 +29,6 @@ import {
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { doctorsTable } from "@/db/schema";
-import { formatCurrencyInCents } from "@/helpers/currency";
 
 import { DentalSpecialty } from "../_constants";
 import { getAvailability } from "../_helpers/availability";
@@ -78,19 +70,6 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
   const availability = getAvailability(doctor);
   const specialtiesText = doctor.specialties.join(", ");
 
-  const getStatusBadgeVariant = (
-    status: "adimplente" | "pendente" | "atrasado",
-  ) => {
-    switch (status) {
-      case "adimplente":
-        return "default";
-      case "pendente":
-        return "secondary";
-      case "atrasado":
-        return "destructive";
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -111,17 +90,6 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
               </p>
             </div>
           </div>
-          <Badge
-            variant={getStatusBadgeVariant(doctor.financialStatus)}
-            className={
-              doctor.financialStatus === "adimplente"
-                ? "bg-green-500 hover:bg-green-600"
-                : ""
-            }
-          >
-            {doctor.financialStatus.charAt(0).toUpperCase() +
-              doctor.financialStatus.slice(1)}
-          </Badge>
         </div>
       </CardHeader>
       <Separator />
@@ -134,10 +102,6 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
           <ClockIcon className="mr-1" />
           {availability.from.format("HH:mm")} as{" "}
           {availability.to.format("HH:mm")}
-        </Badge>
-        <Badge variant="outline">
-          <DollarSignIcon className="mr-1" />
-          {formatCurrencyInCents(doctor.appointmentPriceInCents)}
         </Badge>
       </CardContent>
       <Separator />
@@ -163,12 +127,6 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
             isOpen={isUpsertDoctorDialogOpen}
           />
         </Dialog>
-        <Button asChild className="w-full" variant="outline">
-          <Link href={`/doctors/${doctor.id}/financials`}>
-            <DollarSignIcon className="mr-2 h-4 w-4" />
-            Financeiro
-          </Link>
-        </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline" className="w-full">

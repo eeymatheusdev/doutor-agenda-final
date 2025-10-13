@@ -393,37 +393,34 @@ export const doctorsTable = pgTable("doctors", {
   clinicId: uuid("clinic_id")
     .notNull()
     .references(() => clinicsTable.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
   avatarImageUrl: text("avatar_image_url"),
+  name: text("name").notNull(),
+  cro: text("cro").notNull(),
+  rg: text("rg").notNull(),
+  cpf: text("cpf").notNull(),
+  dateOfBirth: date("date_of_birth").notNull(),
+  email: text("email").notNull(),
+  specialties: dentalSpecialtyEnum("specialties").array().notNull(),
+  observations: text("observations"),
+  education: text("education"),
+
   // 1 - Monday, 2 - Tuesday, 3 - Wednesday, 4 - Thursday, 5 - Friday, 6 - Saturday, 0 - Sunday
   availableFromWeekDay: integer("available_from_week_day").notNull(),
   availableToWeekDay: integer("available_to_week_day").notNull(),
   availableFromTime: time("available_from_time").notNull(),
   availableToTime: time("available_to_time").notNull(),
-  specialties: dentalSpecialtyEnum("specialties").array().notNull(),
-  appointmentPriceInCents: integer("appointment_price_in_cents").notNull(),
+
+  addressStreet: text("address_street").notNull(),
+  addressNumber: text("address_number").notNull(),
+  addressComplement: text("address_complement"),
+  addressNeighborhood: text("address_neighborhood").notNull(),
+  addressCity: text("address_city").notNull(),
+  addressState: brazilianStateEnum("address_state").notNull(),
+  addressZipcode: text("address_zipcode").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date()),
-
-  cro: text("cro").notNull(),
-  email: text("email").notNull().unique(),
-  dateOfBirth: date("date_of_birth").notNull(), // Data de nascimento (opcional)
-  rg: text("rg").notNull(), // RG (opcional)
-  cpf: text("cpf").notNull(), // CPF (opcional)
-  street: text("street").notNull(),
-  number: text("number").notNull(),
-  neighborhood: text("neighborhood").notNull(),
-  zipCode: text("zip_code").notNull(),
-  complement: text("complement"),
-  city: text("city").notNull(),
-  state: brazilianStateEnum("state").notNull(),
-  observations: text("observations"), // Observações (opcional)
-  education: text("education"), // Formações (opcional)
-  financialStatus: doctorFinancialStatusEnum("financial_status")
-    .notNull()
-    .default("adimplente"),
 });
 
 export const doctorsTableRelations = relations(
