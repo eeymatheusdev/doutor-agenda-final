@@ -451,7 +451,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione" />
+                        <SelectValue placeholder="SP" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

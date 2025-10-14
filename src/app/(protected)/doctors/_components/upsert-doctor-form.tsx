@@ -314,6 +314,7 @@ const UpsertDoctorForm = ({
                       <PatternFormat
                         format="###.###.###-##"
                         mask="_"
+                        placeholder="000.000.000-00"
                         value={field.value}
                         onValueChange={(value) => {
                           field.onChange(value.value);
@@ -332,7 +333,16 @@ const UpsertDoctorForm = ({
                   <FormItem>
                     <FormLabel>RG</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <PatternFormat
+                        format="##.###.###-#"
+                        mask="_"
+                        placeholder="00.000.000-0"
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value.value);
+                        }}
+                        customInput={Input}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -514,7 +524,7 @@ const UpsertDoctorForm = ({
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione" />
+                          <SelectValue placeholder="SP" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
