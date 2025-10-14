@@ -375,7 +375,7 @@ const UpsertClinicForm = ({ clinicData, onSuccess }: UpsertClinicFormProps) => {
               name="addressStreet"
               render={({ field }) => (
                 <FormItem className="col-span-2">
-                  <FormLabel>Rua / Avenida</FormLabel>
+                  <FormLabel>Rua/Avenida</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ""} />
                   </FormControl>

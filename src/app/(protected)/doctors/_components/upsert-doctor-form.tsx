@@ -258,42 +258,26 @@ const UpsertDoctorForm = ({
           onSubmit={form.handleSubmit(onSubmit)}
           className="max-h-[70vh] space-y-6 overflow-y-auto px-1 pr-4"
         >
-          {/* Informações Pessoais */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Informações Pessoais</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="cro"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>CRO/CRM</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: 12345/SP" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>Nome</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-2">
                   <FormLabel>E-mail</FormLabel>
                   <FormControl>
                     <Input
@@ -309,54 +293,12 @@ const UpsertDoctorForm = ({
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <FormField
                 control={form.control}
-                name="dateOfBirth"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data de nascimento</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: ptBR })
-                            ) : (
-                              <span>Selecione a data</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          captionLayout="dropdown-buttons"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          fromYear={1950}
-                          toYear={new Date().getFullYear()}
-                          initialFocus
-                          locale={ptBR}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="rg"
+                name="cro"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>RG</FormLabel>
+                    <FormLabel>CRO/CRM</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input placeholder="Ex: 12345/SP" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -383,26 +325,75 @@ const UpsertDoctorForm = ({
                   </FormItem>
                 )}
               />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Endereço */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Endereço</h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
-                name="addressZipcode"
+                name="rg"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CEP</FormLabel>
+                    <FormLabel>RG</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data de Nascimento</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground",
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? (
+                              format(field.value, "PPP", { locale: ptBR })
+                            ) : (
+                              <span>Selecione</span>
+                            )}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          captionLayout="dropdown-buttons"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          fromYear={1950}
+                          toYear={new Date().getFullYear()}
+                          initialFocus
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="whatsApp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>WhatsApp</FormLabel>
                     <FormControl>
                       <PatternFormat
-                        format="#####-###"
+                        format="(##) #####-####"
                         mask="_"
-                        value={field.value}
+                        placeholder="(11) 99999-9999"
+                        value={field.value ?? ""}
                         onValueChange={(value) => {
                           field.onChange(value.value);
                         }}
@@ -415,12 +406,54 @@ const UpsertDoctorForm = ({
               />
               <FormField
                 control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone</FormLabel>
+                    <FormControl>
+                      <PatternFormat
+                        format="(##) #####-####"
+                        mask="_"
+                        placeholder="(11) 99999-9999"
+                        value={field.value ?? ""}
+                        onValueChange={(value) => {
+                          field.onChange(value.value);
+                        }}
+                        customInput={Input}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          <Separator />
+          <div className="space-y-4">
+            <h3 className="font-semibold">Endereço</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <FormField
+                control={form.control}
                 name="addressStreet"
                 render={({ field }) => (
                   <FormItem className="col-span-2">
                     <FormLabel>Rua/Avenida</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="addressNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -430,12 +463,12 @@ const UpsertDoctorForm = ({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
-                name="addressNumber"
+                name="addressNeighborhood"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número</FormLabel>
+                  <FormItem className="col-span-2">
+                    <FormLabel>Bairro</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -454,29 +487,16 @@ const UpsertDoctorForm = ({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="addressNeighborhood"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bairro</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
               <FormField
                 control={form.control}
                 name="addressCity"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="col-span-2">
                     <FormLabel>Cidade</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -486,15 +506,15 @@ const UpsertDoctorForm = ({
                 control={form.control}
                 name="addressState"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="col-span-1">
                     <FormLabel>Estado</FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(value)}
-                      value={field.value}
+                      value={field.value ?? ""}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione o Estado" />
+                          <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -509,12 +529,32 @@ const UpsertDoctorForm = ({
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="addressZipcode"
+                render={({ field }) => (
+                  <FormItem className="col-span-1">
+                    <FormLabel>CEP</FormLabel>
+                    <FormControl>
+                      <PatternFormat
+                        format="#####-###"
+                        mask="_"
+                        placeholder="00000-000"
+                        value={field.value ?? ""}
+                        onValueChange={(value) => {
+                          field.onChange(value.value);
+                        }}
+                        customInput={Input}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           </div>
 
           <Separator />
-
-          {/* Especialidades e Disponibilidade */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
               Especialidades e Disponibilidade
@@ -774,7 +814,6 @@ const UpsertDoctorForm = ({
           </div>
 
           <Separator />
-          {/* Informações Adicionais */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Informações Adicionais</h3>
             <FormField
@@ -803,6 +842,23 @@ const UpsertDoctorForm = ({
                   <FormLabel>Observações (Opcional)</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="avatarImageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL da Foto (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="URL da Foto do médico"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
