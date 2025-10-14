@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { NumericFormat, PatternFormat } from "react-number-format";
+import { PatternFormat } from "react-number-format";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -221,8 +221,6 @@ const UpsertDoctorForm = ({
       whatsApp: nullableString(values.whatsApp),
       observations: nullableString(values.observations),
       education: nullableString(values.education),
-      availableFromWeekDay: parseInt(values.availableFromWeekDay),
-      availableToWeekDay: parseInt(values.availableToWeekDay),
       addressComplement: nullableString(values.addressComplement),
     });
   };
@@ -396,7 +394,7 @@ const UpsertDoctorForm = ({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
-                name="zipCode"
+                name="addressZipcode"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>CEP</FormLabel>
@@ -417,7 +415,7 @@ const UpsertDoctorForm = ({
               />
               <FormField
                 control={form.control}
-                name="street"
+                name="addressStreet"
                 render={({ field }) => (
                   <FormItem className="col-span-2">
                     <FormLabel>Rua/Avenida</FormLabel>
@@ -432,7 +430,7 @@ const UpsertDoctorForm = ({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
-                name="number"
+                name="addressNumber"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Número</FormLabel>
@@ -445,7 +443,7 @@ const UpsertDoctorForm = ({
               />
               <FormField
                 control={form.control}
-                name="complement"
+                name="addressComplement"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Complemento (Opcional)</FormLabel>
@@ -458,7 +456,7 @@ const UpsertDoctorForm = ({
               />
               <FormField
                 control={form.control}
-                name="neighborhood"
+                name="addressNeighborhood"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Bairro</FormLabel>
@@ -473,7 +471,7 @@ const UpsertDoctorForm = ({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
-                name="city"
+                name="addressCity"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cidade</FormLabel>
@@ -486,7 +484,7 @@ const UpsertDoctorForm = ({
               />
               <FormField
                 control={form.control}
-                name="state"
+                name="addressState"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Estado</FormLabel>
@@ -579,31 +577,6 @@ const UpsertDoctorForm = ({
                       ))}
                     </div>
                   )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="appointmentPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preço da consulta</FormLabel>
-                  <NumericFormat
-                    value={field.value}
-                    onValueChange={(value) => {
-                      field.onChange(value.floatValue);
-                    }}
-                    decimalScale={2}
-                    fixedDecimalScale
-                    decimalSeparator=","
-                    allowNegative={false}
-                    allowLeadingZeros={false}
-                    thousandSeparator="."
-                    customInput={Input}
-                    prefix="R$"
-                  />
                   <FormMessage />
                 </FormItem>
               )}

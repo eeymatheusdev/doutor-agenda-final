@@ -2,6 +2,7 @@
 
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
@@ -17,8 +18,24 @@ dayjs.extend(utc);
 export const upsertDoctor = actionClient
   .schema(upsertDoctorSchema)
   .action(async ({ parsedInput }) => {
-    const availableFromTime = parsedInput.availableFromTime; // 15:30:00
-    const availableToTime = parsedInput.availableToTime; // 16:00:00
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+    if (!session?.user.clinic?.id) {
+      throw new Error("Clinic not found");
+    }
+
+    const {
+      availableFromTime,
+      availableToTime,
+      dateOfBirth,
+      availableFromWeekDay,
+      availableToWeekDay,
+      ...rest
+    } = parsedInput;
 
     const availableFromTimeUTC = dayjs()
       .set("hour", parseInt(availableFromTime.split(":")[0]))
@@ -31,36 +48,28 @@ export const upsertDoctor = actionClient
       .set("second", parseInt(availableToTime.split(":")[2]))
       .utc();
 
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    if (!session?.user) {
-      throw new Error("Unauthorized");
-    }
-    if (!session?.user.clinic?.id) {
-      throw new Error("Clinic not found");
-    }
-    const formattedDateOfBirth = parsedInput.dateOfBirth
-      ? dayjs(parsedInput.dateOfBirth).format("YYYY-MM-DD")
+    const formattedDateOfBirth = dateOfBirth
+      ? dayjs(dateOfBirth).format("YYYY-MM-DD")
       : "";
 
-    await db
-      .insert(doctorsTable)
-      .values({
-        ...parsedInput,
-        dateOfBirth: formattedDateOfBirth, // agora sempre string
-        clinicId: session.user.clinic.id,
-        availableFromTime: availableFromTimeUTC.format("HH:mm:ss"),
-        availableToTime: availableToTimeUTC.format("HH:mm:ss"),
-      })
-      .onConflictDoUpdate({
-        target: [doctorsTable.id],
-        set: {
-          ...parsedInput,
-          dateOfBirth: formattedDateOfBirth,
-          availableFromTime: availableFromTimeUTC.format("HH:mm:ss"),
-          availableToTime: availableToTimeUTC.format("HH:mm:ss"),
-        },
-      });
+    const values = {
+      ...rest,
+      dateOfBirth: formattedDateOfBirth,
+      clinicId: session.user.clinic.id,
+      availableFromTime: availableFromTimeUTC.format("HH:mm:ss"),
+      availableToTime: availableToTimeUTC.format("HH:mm:ss"),
+      availableFromWeekDay: parseInt(availableFromWeekDay),
+      availableToWeekDay: parseInt(availableToWeekDay),
+    };
+
+    if (values.id) {
+      await db
+        .update(doctorsTable)
+        .set(values)
+        .where(eq(doctorsTable.id, values.id));
+    } else {
+      await db.insert(doctorsTable).values(values);
+    }
+
     revalidatePath("/doctors");
   });

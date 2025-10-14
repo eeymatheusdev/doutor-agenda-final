@@ -134,21 +134,6 @@ const AddAppointmentForm = ({
     enabled: !!selectedDate && !!selectedDoctorId,
   });
 
-  // Atualizar o preço quando o médico for selecionado
-  useEffect(() => {
-    if (selectedDoctorId) {
-      const selectedDoctor = doctors.find(
-        (doctor) => doctor.id === selectedDoctorId,
-      );
-      if (selectedDoctor) {
-        form.setValue(
-          "appointmentPrice",
-          selectedDoctor.appointmentPriceInCents / 100,
-        );
-      }
-    }
-  }, [selectedDoctorId, doctors, form]);
-
   useEffect(() => {
     if (isOpen) {
       form.reset({
