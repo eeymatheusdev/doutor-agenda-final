@@ -46,7 +46,7 @@ export const upsertDoctorSchema = z
     }),
     phone: z
       .string()
-      .regex(/^\d{11}$/, "Telefone inválido")
+      .regex(/^\d{10}$/, "Telefone inválido")
       .optional()
       .nullable(),
     whatsApp: z

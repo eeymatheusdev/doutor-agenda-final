@@ -1,8 +1,10 @@
+// src/app/(protected)/doctors/_components/doctor-card.tsx
 "use client";
 
-import { CalendarIcon, ClockIcon, Mail, TrashIcon } from "lucide-react";
+import { CalendarIcon, ClockIcon, Mail, Phone, TrashIcon } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
+import { FaWhatsapp } from "react-icons/fa";
 import { toast } from "sonner";
 
 import { deleteDoctor } from "@/actions/delete-doctor";
@@ -17,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,12 +72,38 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
   const availability = getAvailability(doctor);
   const specialtiesText = doctor.specialties.join(", ");
 
+  const formatPhoneNumber = (phone: string | null | undefined) => {
+    if (!phone) return "";
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(
+        7,
+      )}`;
+    }
+    return phone;
+  };
+
+  const formatWhatsAppNumber = (whatsApp: string | null | undefined) => {
+    if (!whatsApp) return "";
+    const cleaned = whatsApp.replace(/\D/g, "");
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(
+        7,
+      )}`;
+    }
+    return whatsApp;
+  };
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-20 w-20">
+              <AvatarImage
+                src={doctor.avatarImageUrl || ""}
+                alt={doctor.name || "Logo"}
+              />
               <AvatarFallback>{doctorInitials}</AvatarFallback>
             </Avatar>
             <div>
@@ -88,6 +116,22 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
                 <Mail className="size-3" />
                 {doctor.email}
               </p>
+              <div className="text-muted-foreground flex items-center gap-1 text-sm">
+                {doctor.phone && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="size-3" />
+                    {formatPhoneNumber(doctor.phone)}
+                  </span>
+                )}
+              </div>
+              <div className="text-muted-foreground flex items-center gap-1 text-sm">
+                {doctor.whatsApp && (
+                  <span className="flex items-center gap-1">
+                    <FaWhatsapp className="size-3" />
+                    {formatWhatsAppNumber(doctor.whatsApp)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

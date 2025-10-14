@@ -96,7 +96,7 @@ const formSchema = z
     }),
     phone: z
       .string()
-      .regex(/^\d{11}$/, "Telefone inválido")
+      .regex(/^\d{10}$/, "Telefone inválido")
       .optional()
       .nullable(),
     whatsApp: z
@@ -422,9 +422,9 @@ const UpsertDoctorForm = ({
                     <FormLabel>Telefone</FormLabel>
                     <FormControl>
                       <PatternFormat
-                        format="(##) #####-####"
+                        format="(##) ####-####"
                         mask="_"
-                        placeholder="(11) 99999-9999"
+                        placeholder="(11) 9999-9999"
                         value={field.value ?? ""}
                         onValueChange={(value) => {
                           field.onChange(value.value);
