@@ -7,11 +7,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { db } from "@/db";
-import {
-  clinicFinancesTable,
-  doctorFinancesTable,
-  patientFinancesTable,
-} from "@/db/schema";
+import { clinicFinancesTable, patientFinancesTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { actionClient } from "@/lib/next-safe-action";
 
@@ -54,17 +50,6 @@ export const getClinicFinanceSummary = actionClient.action(async () => {
     .from(patientFinancesTable)
     .where(eq(patientFinancesTable.clinicId, clinicId));
 
-  const [doctorCommissions] = await db
-    .select({ total: sum(doctorFinancesTable.amountInCents) })
-    .from(doctorFinancesTable)
-    .where(
-      and(
-        eq(doctorFinancesTable.clinicId, clinicId),
-        eq(doctorFinancesTable.type, "commission"),
-        eq(doctorFinancesTable.status, "pending"),
-      ),
-    );
-
   const totalRevenue = Number(revenue?.total) || 0;
   const totalExpense = Number(expense?.total) || 0;
   const netBalance = totalRevenue - totalExpense;
@@ -74,7 +59,6 @@ export const getClinicFinanceSummary = actionClient.action(async () => {
     totalExpense,
     netBalance,
     totalPatientDebt: Number(patientDebts?.total) || 0,
-    totalDoctorDebt: Number(doctorCommissions?.total) / 100 || 0,
   };
 });
 

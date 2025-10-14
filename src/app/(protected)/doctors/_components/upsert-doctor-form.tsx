@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, XIcon } from "lucide-react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -70,17 +70,17 @@ const allDentalSpecialties = Object.values(DentalSpecialty) as [
 
 const formSchema = z
   .object({
+    avatarImageUrl: z
+      .string()
+      .url("URL inválida.")
+      .or(z.literal(""))
+      .optional()
+      .nullable(),
     name: z.string().trim().min(1, {
       message: "Nome é obrigatório.",
     }),
     cro: z.string().trim().min(1, {
       message: "CRO é obrigatório.",
-    }),
-    email: z.string().email({
-      message: "E-mail inválido.",
-    }),
-    dateOfBirth: z.date({
-      required_error: "Data de nascimento é obrigatória.",
     }),
     rg: z.string().trim().min(1, {
       message: "RG é obrigatório.",
@@ -88,35 +88,27 @@ const formSchema = z
     cpf: z.string().trim().min(1, {
       message: "CPF é obrigatório.",
     }),
-    street: z.string().trim().min(1, {
-      message: "Rua é obrigatória.",
+    dateOfBirth: z.date({
+      required_error: "Data de nascimento é obrigatória.",
     }),
-    number: z.string().trim().min(1, {
-      message: "Número é obrigatório.",
+    email: z.string().email({
+      message: "E-mail inválido.",
     }),
-    neighborhood: z.string().trim().min(1, {
-      message: "Bairro é obrigatório.",
-    }),
-    zipCode: z.string().trim().min(1, {
-      message: "CEP é obrigatório.",
-    }),
-    complement: z.string().optional().nullable(),
-    city: z.string().trim().min(1, {
-      message: "Cidade é obrigatória.",
-    }),
-    state: z.enum(allBrazilianStates, {
-      // USANDO O ENUM DE ESTADO
-      required_error: "Estado é obrigatório.",
-    }),
-    observations: z.string().optional().nullable(),
-    education: z.string().optional().nullable(),
-    // MÚLTIPLAS ESPECIALIZAÇÕES
+    phone: z
+      .string()
+      .regex(/^\d{11}$/, "Telefone inválido")
+      .optional()
+      .nullable(),
+    whatsApp: z
+      .string()
+      .regex(/^\d{11}$/, "WhatsApp inválido")
+      .optional()
+      .nullable(),
     specialties: z.array(z.enum(allDentalSpecialties)).min(1, {
       message: "Selecione pelo menos uma especialidade.",
     }),
-    appointmentPrice: z.number().min(1, {
-      message: "Preço da consulta é obrigatório.",
-    }),
+    observations: z.string().optional().nullable(),
+    education: z.string().optional().nullable(),
     availableFromWeekDay: z.string(),
     availableToWeekDay: z.string(),
     availableFromTime: z.string().min(1, {
@@ -125,6 +117,15 @@ const formSchema = z
     availableToTime: z.string().min(1, {
       message: "Hora de término é obrigatória.",
     }),
+    addressStreet: z.string().trim().min(1, "Rua/Avenida é obrigatória."),
+    addressNumber: z.string().trim().min(1, "Número é obrigatório."),
+    addressComplement: z.string().optional().nullable(),
+    addressNeighborhood: z.string().trim().min(1, "Bairro é obrigatório."),
+    addressCity: z.string().trim().min(1, "Cidade é obrigatória."),
+    addressState: z.enum(allBrazilianStates, {
+      required_error: "Estado é obrigatório.",
+    }),
+    addressZipcode: z.string().regex(/^\d{8}$/, "CEP inválido"),
   })
   .refine(
     (data) => {
@@ -137,14 +138,12 @@ const formSchema = z
     },
   );
 
-// Novo tipo para o objeto doctor de entrada, pois specialties agora é um array
 interface DoctorWithArraySpecialties
   extends Omit<
     typeof doctorsTable.$inferSelect,
     "specialties" | "dateOfBirth"
   > {
   specialties: DentalSpecialty[] | null;
-  // CORREÇÃO: Define dateOfBirth como string | null, pois é assim que é passado para o form.
   dateOfBirth: string | null;
 }
 
@@ -154,7 +153,6 @@ interface UpsertDoctorFormProps {
   onSuccess?: () => void;
 }
 
-// Helper para converter string de data ou null/undefined para Date | undefined
 const parseDate = (dateString: string | null | undefined) =>
   dateString ? new Date(dateString) : undefined;
 
@@ -163,40 +161,36 @@ const UpsertDoctorForm = ({
   onSuccess,
   isOpen,
 }: UpsertDoctorFormProps) => {
-  // Define valores padrão com coerção de tipos
   const defaultValues = {
+    avatarImageUrl: doctor?.avatarImageUrl ?? "",
     name: doctor?.name ?? "",
     cro: doctor?.cro ?? "",
-    email: doctor?.email ?? "",
-    // Usa a string/null vinda do prop 'doctor', que será tratada por parseDate para inicializar o form
-    dateOfBirth: parseDate(doctor?.dateOfBirth),
     rg: doctor?.rg ?? "",
     cpf: doctor?.cpf ?? "",
-    street: doctor?.street ?? "",
-    number: doctor?.number ?? "",
-    neighborhood: doctor?.neighborhood ?? "",
-    zipCode: doctor?.zipCode ?? "",
-    complement: doctor?.complement ?? "",
-    city: doctor?.city ?? "",
-    state:
-      (doctor?.state as keyof typeof BrazilianState) ??
-      brazilianStates[0].value, // Define um estado padrão
+    dateOfBirth: parseDate(doctor?.dateOfBirth),
+    email: doctor?.email ?? "",
+    phone: doctor?.phone ?? "",
+    whatsApp: doctor?.whatsApp ?? "",
+    specialties: (doctor?.specialties as any) ?? [],
     observations: doctor?.observations ?? "",
     education: doctor?.education ?? "",
-    specialties: doctor?.specialties ?? [],
-    appointmentPrice: doctor?.appointmentPriceInCents
-      ? doctor.appointmentPriceInCents / 100
-      : 0,
     availableFromWeekDay: doctor?.availableFromWeekDay?.toString() ?? "1",
     availableToWeekDay: doctor?.availableToWeekDay?.toString() ?? "5",
     availableFromTime: doctor?.availableFromTime ?? "",
     availableToTime: doctor?.availableToTime ?? "",
+    addressStreet: doctor?.addressStreet ?? "",
+    addressNumber: doctor?.addressNumber ?? "",
+    addressComplement: doctor?.addressComplement ?? "",
+    addressNeighborhood: doctor?.addressNeighborhood ?? "",
+    addressCity: doctor?.addressCity ?? "",
+    addressState: (doctor?.addressState as any) ?? undefined,
+    addressZipcode: doctor?.addressZipcode ?? "",
   };
 
   const form = useForm<z.infer<typeof formSchema>>({
     shouldUnregister: true,
     resolver: zodResolver(formSchema),
-    defaultValues: defaultValues as any, // Adicionado 'as any' temporariamente para evitar conflito de tipos de dateOfBirth com o form
+    defaultValues: defaultValues as any,
   });
 
   useEffect(() => {
@@ -216,26 +210,25 @@ const UpsertDoctorForm = ({
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Helper para converter string vazia para null (somente para campos opcionais)
     const nullableString = (value: string | null | undefined) =>
       value === "" ? null : value;
 
     upsertDoctorAction.execute({
       ...values,
       id: doctor?.id,
-      availableFromWeekDay: parseInt(values.availableFromWeekDay),
-      availableToWeekDay: parseInt(values.availableToWeekDay),
-      appointmentPriceInCents: values.appointmentPrice * 100,
-      // Apenas campos opcionais precisam de conversão
-      complement: nullableString(values.complement),
+      avatarImageUrl: nullableString(values.avatarImageUrl),
+      phone: nullableString(values.phone),
+      whatsApp: nullableString(values.whatsApp),
       observations: nullableString(values.observations),
       education: nullableString(values.education),
+      availableFromWeekDay: parseInt(values.availableFromWeekDay),
+      availableToWeekDay: parseInt(values.availableToWeekDay),
+      addressComplement: nullableString(values.addressComplement),
     });
   };
 
   const selectedSpecialties = form.watch("specialties");
 
-  // Função para gerenciar a seleção múltipla
   const handleSpecialtyChange = (value: string) => {
     const specialties = form.getValues("specialties");
 
@@ -694,8 +687,6 @@ const UpsertDoctorForm = ({
                       <SelectContent>
                         <SelectGroup>
                           <SelectLabel>Manhã</SelectLabel>
-                          <SelectItem value="05:00:00">05:00</SelectItem>
-                          <SelectItem value="05:30:00">05:30</SelectItem>
                           <SelectItem value="06:00:00">06:00</SelectItem>
                           <SelectItem value="06:30:00">06:30</SelectItem>
                           <SelectItem value="07:00:00">07:00</SelectItem>
@@ -735,9 +726,6 @@ const UpsertDoctorForm = ({
                           <SelectItem value="21:00:00">21:00</SelectItem>
                           <SelectItem value="21:30:00">21:30</SelectItem>
                           <SelectItem value="22:00:00">22:00</SelectItem>
-                          <SelectItem value="22:30:00">22:30</SelectItem>
-                          <SelectItem value="23:00:00">23:00</SelectItem>
-                          <SelectItem value="23:30:00">23:30</SelectItem>
                         </SelectGroup>
                       </SelectContent>
                     </Select>
@@ -763,8 +751,6 @@ const UpsertDoctorForm = ({
                       <SelectContent>
                         <SelectGroup>
                           <SelectLabel>Manhã</SelectLabel>
-                          <SelectItem value="05:00:00">05:00</SelectItem>
-                          <SelectItem value="05:30:00">05:30</SelectItem>
                           <SelectItem value="06:00:00">06:00</SelectItem>
                           <SelectItem value="06:30:00">06:30</SelectItem>
                           <SelectItem value="07:00:00">07:00</SelectItem>
@@ -804,9 +790,6 @@ const UpsertDoctorForm = ({
                           <SelectItem value="21:00:00">21:00</SelectItem>
                           <SelectItem value="21:30:00">21:30</SelectItem>
                           <SelectItem value="22:00:00">22:00</SelectItem>
-                          <SelectItem value="22:30:00">22:30</SelectItem>
-                          <SelectItem value="23:00:00">23:00</SelectItem>
-                          <SelectItem value="23:30:00">23:30</SelectItem>
                         </SelectGroup>
                       </SelectContent>
                     </Select>

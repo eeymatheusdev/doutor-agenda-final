@@ -12,7 +12,6 @@ import {
   time,
   timestamp,
   uuid,
-  varchar,
 } from "drizzle-orm/pg-core";
 
 // NOVO: Enum para Status de Anamnese
@@ -128,23 +127,10 @@ export const patientFinancialStatusEnum = pgEnum("patient_financial_status", [
   "inadimplente",
 ]);
 
-// NOVO: Enum para Status Financeiro do Doutor
-export const doctorFinancialStatusEnum = pgEnum("doctor_financial_status", [
-  "adimplente",
-  "pendente",
-  "atrasado",
-]);
-
 // CORRIGIDO: Enum para Tipo de Transação Financeira do Paciente
 export const patientFinancialTransactionTypeEnum = pgEnum(
   "patient_financial_transaction_type",
   ["charge", "payment"],
-);
-
-// NOVO: Enum para Tipo de Transação Financeira do Médico
-export const doctorFinancialTransactionTypeEnum = pgEnum(
-  "doctor_financial_transaction_type",
-  ["commission", "payment"],
 );
 
 // NOVO: Enum para Status da Cobrança
@@ -400,6 +386,8 @@ export const doctorsTable = pgTable("doctors", {
   cpf: text("cpf").notNull(),
   dateOfBirth: date("date_of_birth").notNull(),
   email: text("email").notNull(),
+  phone: text("phone"),
+  whatsApp: text("whatsApp"),
   specialties: dentalSpecialtyEnum("specialties").array().notNull(),
   observations: text("observations"),
   education: text("education"),
@@ -432,7 +420,6 @@ export const doctorsTableRelations = relations(
     }),
     appointments: many(appointmentsTable),
     odontograms: many(odontogramsTable), // NOVA RELAÇÃO
-    finances: many(doctorFinancesTable),
   }),
 );
 
@@ -625,47 +612,6 @@ export const appointmentsTableRelations = relations(
     doctor: one(doctorsTable, {
       fields: [appointmentsTable.doctorId],
       references: [doctorsTable.id],
-    }),
-  }),
-);
-
-export const doctorFinancesTable = pgTable("doctor_finances", {
-  id: serial("id").primaryKey(),
-  doctorId: uuid("doctor_id")
-    .notNull()
-    .references(() => doctorsTable.id, { onDelete: "cascade" }),
-  patientId: uuid("patient_id").references(() => patientsTable.id, {
-    onDelete: "set null",
-  }),
-  clinicId: uuid("clinic_id")
-    .notNull()
-    .references(() => clinicsTable.id, { onDelete: "cascade" }),
-  type: doctorFinancialTransactionTypeEnum("type").notNull(),
-  amountInCents: integer("amount_in_cents").notNull(),
-  description: text("description"),
-  method: text("method"),
-  dueDate: date("due_date"),
-  status: chargeStatusEnum("status"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
-
-export const doctorFinancesTableRelations = relations(
-  doctorFinancesTable,
-  ({ one }) => ({
-    doctor: one(doctorsTable, {
-      fields: [doctorFinancesTable.doctorId],
-      references: [doctorsTable.id],
-    }),
-    patient: one(patientsTable, {
-      fields: [doctorFinancesTable.patientId],
-      references: [patientsTable.id],
-    }),
-    clinic: one(clinicsTable, {
-      fields: [doctorFinancesTable.clinicId],
-      references: [clinicsTable.id],
     }),
   }),
 );

@@ -20,17 +20,17 @@ const allDentalSpecialties = Object.values(DentalSpecialty) as [
 export const upsertDoctorSchema = z
   .object({
     id: z.string().uuid().optional(),
+    avatarImageUrl: z
+      .string()
+      .url("URL inválida.")
+      .or(z.literal(""))
+      .optional()
+      .nullable(),
     name: z.string().trim().min(1, {
       message: "Nome é obrigatório.",
     }),
     cro: z.string().trim().min(1, {
       message: "CRO é obrigatório.",
-    }),
-    email: z.string().email({
-      message: "E-mail inválido.",
-    }),
-    dateOfBirth: z.date({
-      required_error: "Data de nascimento é obrigatória.",
     }),
     rg: z.string().trim().min(1, {
       message: "RG é obrigatório.",
@@ -38,43 +38,44 @@ export const upsertDoctorSchema = z
     cpf: z.string().trim().min(1, {
       message: "CPF é obrigatório.",
     }),
-    street: z.string().trim().min(1, {
-      message: "Rua é obrigatória.",
+    dateOfBirth: z.date({
+      required_error: "Data de nascimento é obrigatória.",
     }),
-    number: z.string().trim().min(1, {
-      message: "Número é obrigatório.",
+    email: z.string().email({
+      message: "E-mail inválido.",
     }),
-    neighborhood: z.string().trim().min(1, {
-      message: "Bairro é obrigatório.",
-    }),
-    zipCode: z.string().trim().min(1, {
-      message: "CEP é obrigatório.",
-    }),
-    complement: z.string().optional().nullable(),
-    city: z.string().trim().min(1, {
-      message: "Cidade é obrigatória.",
-    }),
-    state: z.enum(allBrazilianStates, {
-      // USANDO O ENUM DE ESTADO
-      required_error: "Estado é obrigatório.",
-    }),
-    observations: z.string().optional().nullable(),
-    education: z.string().optional().nullable(),
-    // MÚLTIPLAS ESPECIALIZAÇÕES
+    phone: z
+      .string()
+      .regex(/^\d{11}$/, "Telefone inválido")
+      .optional()
+      .nullable(),
+    whatsApp: z
+      .string()
+      .regex(/^\d{11}$/, "WhatsApp inválido")
+      .optional()
+      .nullable(),
     specialties: z.array(z.enum(allDentalSpecialties)).min(1, {
       message: "Selecione pelo menos uma especialidade.",
     }),
-    appointmentPriceInCents: z.number().min(1, {
-      message: "Preço da consulta é obrigatório.",
-    }),
-    availableFromWeekDay: z.number().min(0).max(6),
-    availableToWeekDay: z.number().min(0).max(6),
+    observations: z.string().optional().nullable(),
+    education: z.string().optional().nullable(),
+    availableFromWeekDay: z.string(),
+    availableToWeekDay: z.string(),
     availableFromTime: z.string().min(1, {
       message: "Hora de início é obrigatória.",
     }),
     availableToTime: z.string().min(1, {
       message: "Hora de término é obrigatória.",
     }),
+    addressStreet: z.string().trim().min(1, "Rua/Avenida é obrigatória."),
+    addressNumber: z.string().trim().min(1, "Número é obrigatório."),
+    addressComplement: z.string().optional().nullable(),
+    addressNeighborhood: z.string().trim().min(1, "Bairro é obrigatório."),
+    addressCity: z.string().trim().min(1, "Cidade é obrigatória."),
+    addressState: z.enum(allBrazilianStates, {
+      required_error: "Estado é obrigatório.",
+    }),
+    addressZipcode: z.string().regex(/^\d{8}$/, "CEP inválido"),
   })
   .refine(
     (data) => {
