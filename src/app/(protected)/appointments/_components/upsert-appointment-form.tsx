@@ -118,15 +118,20 @@ const UpsertAppointmentForm = ({
   }, [isOpen, appointment, form, type]);
 
   const selectedDoctorId = form.watch("doctorId");
-  const selectedPatientId = form.watch("patientId");
   const selectedDate = form.watch("date");
 
   const { data: availableTimes } = useQuery({
-    queryKey: ["available-times", selectedDate, selectedDoctorId],
+    queryKey: [
+      "available-times",
+      selectedDate,
+      selectedDoctorId,
+      appointment?.id,
+    ],
     queryFn: () =>
       getAvailableTimes({
         date: dayjs(selectedDate).format("YYYY-MM-DD"),
         doctorId: selectedDoctorId,
+        appointmentId: appointment?.id,
       }),
     enabled: !!selectedDate && !!selectedDoctorId,
   });
@@ -234,7 +239,6 @@ const UpsertAppointmentForm = ({
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
-                  disabled={isFinalizing && isEditing}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">

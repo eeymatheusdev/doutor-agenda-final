@@ -3,7 +3,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm"; // Import 'and' e 'ne'
 import { headers } from "next/headers";
 import { z } from "zod";
 
@@ -20,7 +20,8 @@ export const getAvailableTimes = actionClient
   .schema(
     z.object({
       doctorId: z.string(),
-      date: z.string().date(), // YYYY-MM-DD,
+      date: z.string().date(), // YYYY-MM-DD
+      appointmentId: z.string().uuid().optional(), // Adicionado para edição
     }),
   )
   .action(async ({ parsedInput }) => {
@@ -46,9 +47,17 @@ export const getAvailableTimes = actionClient
     if (!doctorIsAvailable) {
       return [];
     }
+
+    // CORREÇÃO: Filtra o agendamento atual da verificação de horários
     const appointments = await db.query.appointmentsTable.findMany({
-      where: eq(appointmentsTable.doctorId, parsedInput.doctorId),
+      where: and(
+        eq(appointmentsTable.doctorId, parsedInput.doctorId),
+        parsedInput.appointmentId
+          ? ne(appointmentsTable.id, parsedInput.appointmentId)
+          : undefined,
+      ),
     });
+
     const appointmentsOnSelectedDate = appointments
       .filter((appointment) => {
         return dayjs(appointment.appointmentDateTime).isSame(

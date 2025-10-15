@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // Importado
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -51,6 +52,7 @@ const AppointmentsTableActions = ({
   patients,
   doctors,
 }: AppointmentsTableActionsProps) => {
+  const router = useRouter(); // Adicionado
   const [upsertDialogIsOpen, setUpsertDialogIsOpen] = useState(false);
   const [formType, setFormType] = useState<"edit" | "finalize">("edit");
 
@@ -85,21 +87,24 @@ const AppointmentsTableActions = ({
           <DropdownMenuContent>
             <DropdownMenuLabel>{appointment.patient.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/patients/${appointment.patientId}`}
-                className="gap-2"
-              >
-                <ClipboardList className="mr-2 h-4 w-4" />
-                Ficha do Paciente
-              </Link>
+            {/* CORREÇÃO: Navegação com onSelect */}
+            <DropdownMenuItem
+              onSelect={() => router.push(`/patients/${appointment.patientId}`)}
+              className="gap-2"
+            >
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Ficha do Paciente
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => openDialog("edit")}>
               <Edit className="mr-2 h-4 w-4" />
               Editar Agendamento
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => openDialog("finalize")}>
-              <Check className="mr-2 h-4 w-4" />
+            {/* CORREÇÃO: Cor ajustada */}
+            <DropdownMenuItem
+              onClick={() => openDialog("finalize")}
+              className="text-primary focus:text-primary"
+            >
+              <Check className="text-primary focus:text-primary mr-2 h-4 w-4" />
               Finalizar Agendamento
             </DropdownMenuItem>
             <AlertDialog>
