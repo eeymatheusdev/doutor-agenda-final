@@ -1,3 +1,4 @@
+// src/app/(protected)/appointments/_components/upsert-appointment-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +8,7 @@ import { ptBR } from "date-fns/locale";
 import dayjs from "dayjs";
 import { CalendarIcon } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -54,7 +55,7 @@ import { cn } from "@/lib/utils";
 
 import { AppointmentWithRelations } from "./table-columns";
 
-const formSchema = z.object({
+const baseSchema = z.object({
   patientId: z.string().min(1, {
     message: "Paciente é obrigatório.",
   }),
@@ -62,13 +63,20 @@ const formSchema = z.object({
     message: "Médico é obrigatório.",
   }),
   date: z.date({
-    message: "Data é obrigatória.",
+    required_error: "Data é obrigatória.",
   }),
   time: z.string().min(1, {
     message: "Horário é obrigatório.",
   }),
-  procedure: z.enum(dentalProcedureEnum.enumValues),
+  procedure: z.enum(dentalProcedureEnum.enumValues, {
+    required_error: "Procedimento é obrigatório.",
+  }),
   status: z.enum(appointmentStatusEnum.enumValues),
+});
+
+const finalizeAppointmentSchema = baseSchema.pick({
+  doctorId: true,
+  procedure: true,
 });
 
 interface UpsertAppointmentFormProps {
@@ -88,9 +96,21 @@ const UpsertAppointmentForm = ({
   appointment,
   type = "edit",
 }: UpsertAppointmentFormProps) => {
-  const form = useForm<z.infer<typeof formSchema>>({
-    shouldUnregister: true,
-    resolver: zodResolver(formSchema),
+  const isFinalizing = type === "finalize";
+  const isEditing = !!appointment;
+
+  const form = useForm<z.infer<typeof baseSchema>>({
+    resolver: zodResolver(
+      isFinalizing ? finalizeAppointmentSchema : baseSchema,
+    ),
+    defaultValues: {
+      patientId: "",
+      doctorId: "",
+      date: undefined,
+      time: "",
+      procedure: undefined,
+      status: "agendada",
+    },
   });
 
   useEffect(() => {
@@ -102,20 +122,20 @@ const UpsertAppointmentForm = ({
           date: new Date(appointment.appointmentDateTime),
           time: format(new Date(appointment.appointmentDateTime), "HH:mm:ss"),
           procedure: appointment.procedure,
-          status: type === "finalize" ? "atendida" : appointment.status,
+          status: isFinalizing ? "atendida" : appointment.status,
         });
       } else {
         form.reset({
           patientId: "",
           doctorId: "",
-          date: undefined,
+          date: new Date(),
           time: "",
           procedure: undefined,
           status: "agendada",
         });
       }
     }
-  }, [isOpen, appointment, form, type]);
+  }, [isOpen, appointment, form, isFinalizing]);
 
   const selectedDoctorId = form.watch("doctorId");
   const selectedDate = form.watch("date");
@@ -123,47 +143,91 @@ const UpsertAppointmentForm = ({
   const { data: availableTimes } = useQuery({
     queryKey: [
       "available-times",
-      selectedDate,
       selectedDoctorId,
+      selectedDate ? dayjs(selectedDate).format("YYYY-MM-DD") : null,
       appointment?.id,
     ],
-    queryFn: () =>
-      getAvailableTimes({
+    queryFn: () => {
+      if (!selectedDate || !selectedDoctorId) {
+        return Promise.resolve({ data: [] });
+      }
+      return getAvailableTimes({
         date: dayjs(selectedDate).format("YYYY-MM-DD"),
         doctorId: selectedDoctorId,
         appointmentId: appointment?.id,
-      }),
-    enabled: !!selectedDate && !!selectedDoctorId,
+      });
+    },
+    enabled: !!selectedDate && !!selectedDoctorId && !isFinalizing,
   });
+
+  const timeOptions = useMemo(() => {
+    const times = availableTimes?.data ?? [];
+    const currentTimeValue = form.getValues("time");
+
+    if (
+      isEditing &&
+      currentTimeValue &&
+      !times.some((t) => t.value === currentTimeValue)
+    ) {
+      return [
+        {
+          value: currentTimeValue,
+          label: currentTimeValue.substring(0, 5),
+          available: true,
+        },
+        ...times,
+      ].sort((a, b) => a.value.localeCompare(b.value));
+    }
+
+    return times;
+  }, [availableTimes, isEditing, form]);
 
   const createAppointmentAction = useAction(addAppointment, {
     onSuccess: () => {
       toast.success("Agendamento criado com sucesso.");
       onSuccess?.();
     },
-    onError: () => {
-      toast.error("Erro ao criar agendamento.");
+    onError: (error) => {
+      toast.error(error.serverError ?? "Erro ao criar agendamento.");
     },
   });
 
   const updateAppointmentAction = useAction(updateAppointment, {
     onSuccess: () => {
-      toast.success("Agendamento atualizado com sucesso.");
+      toast.success(
+        isFinalizing
+          ? "Agendamento finalizado com sucesso."
+          : "Agendamento atualizado com sucesso.",
+      );
       onSuccess?.();
     },
-    onError: () => {
-      toast.error("Erro ao atualizar agendamento.");
+    onError: (error) => {
+      toast.error(error.serverError ?? "Erro ao atualizar agendamento.");
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (
+    values: z.infer<typeof baseSchema | typeof finalizeAppointmentSchema>,
+  ) => {
     if (appointment) {
-      updateAppointmentAction.execute({
-        ...values,
-        id: appointment.id,
-      });
+      if (isFinalizing) {
+        const finalData = {
+          id: appointment.id,
+          patientId: appointment.patientId,
+          date: new Date(appointment.appointmentDateTime),
+          time: format(new Date(appointment.appointmentDateTime), "HH:mm:ss"),
+          status: "atendida" as const,
+          ...(values as z.infer<typeof finalizeAppointmentSchema>),
+        };
+        updateAppointmentAction.execute(finalData);
+      } else {
+        updateAppointmentAction.execute({
+          ...(values as z.infer<typeof baseSchema>),
+          id: appointment.id,
+        });
+      }
     } else {
-      createAppointmentAction.execute(values);
+      createAppointmentAction.execute(values as z.infer<typeof baseSchema>);
     }
   };
 
@@ -175,13 +239,13 @@ const UpsertAppointmentForm = ({
     if (!selectedDoctor) return false;
     const dayOfWeek = date.getDay();
     return (
-      dayOfWeek >= selectedDoctor?.availableFromWeekDay &&
-      dayOfWeek <= selectedDoctor?.availableToWeekDay
+      dayOfWeek >= selectedDoctor.availableFromWeekDay &&
+      dayOfWeek <= selectedDoctor.availableToWeekDay
     );
   };
 
-  const isFinalizing = type === "finalize";
-  const isEditing = !!appointment;
+  const isLoading =
+    createAppointmentAction.isPending || updateAppointmentAction.isPending;
 
   return (
     <DialogContent className="sm:max-w-[500px]">
@@ -209,8 +273,8 @@ const UpsertAppointmentForm = ({
                 <FormLabel>Paciente</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={isFinalizing || isEditing}
+                  value={field.value}
+                  disabled={isEditing}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -236,10 +300,7 @@ const UpsertAppointmentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Médico</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecione um médico" />
@@ -345,7 +406,9 @@ const UpsertAppointmentForm = ({
                       selected={field.value}
                       onSelect={field.onChange}
                       disabled={(date) =>
-                        date < new Date() || !isDateAvailable(date)
+                        !isEditing &&
+                        (date < dayjs().startOf("day").toDate() ||
+                          !isDateAvailable(date))
                       }
                       initialFocus
                     />
@@ -365,7 +428,7 @@ const UpsertAppointmentForm = ({
                 <Select
                   onValueChange={field.onChange}
                   value={field.value}
-                  disabled={isFinalizing || !selectedDate}
+                  disabled={isFinalizing || !selectedDate || !selectedDoctorId}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -373,13 +436,14 @@ const UpsertAppointmentForm = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {availableTimes?.data?.map((time) => (
+                    {timeOptions.map((time) => (
                       <SelectItem
                         key={time.value}
                         value={time.value}
                         disabled={!time.available}
                       >
-                        {time.label} {!time.available && "(Indisponível)"}
+                        {time.label}{" "}
+                        {!time.available && !isEditing && "(Indisponível)"}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -390,17 +454,14 @@ const UpsertAppointmentForm = ({
           />
 
           <DialogFooter>
-            <Button
-              type="submit"
-              disabled={
-                createAppointmentAction.isPending ||
-                updateAppointmentAction.isPending
-              }
-            >
-              {createAppointmentAction.isPending ||
-              updateAppointmentAction.isPending
-                ? "Salvando..."
-                : "Salvar"}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading
+                ? isFinalizing
+                  ? "Finalizando..."
+                  : "Salvando..."
+                : isFinalizing
+                  ? "Finalizar"
+                  : "Salvar"}
             </Button>
           </DialogFooter>
         </form>
