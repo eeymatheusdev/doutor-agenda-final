@@ -1,5 +1,7 @@
+// src/data/get-dashboard.ts
+
 import dayjs from "dayjs";
-import { and, count, desc, eq, gte, lte, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
@@ -116,10 +118,6 @@ export const getDashboard = async ({ from, to, session }: Params) => {
           "date",
         ),
         appointments: count(appointmentsTable.id),
-        revenue:
-          sql<number>`COALESCE(SUM(${appointmentsTable.appointmentPriceInCents}), 0)`.as(
-            "revenue",
-          ),
       })
       .from(appointmentsTable)
       .where(
@@ -146,8 +144,8 @@ export const getDashboard = async ({ from, to, session }: Params) => {
     totalAppointments,
     totalPatients,
     totalDoctors,
-    topDoctors: topDoctors as any, // Mantendo a tipagem flexível para o resultado da consulta SQL
-    topSpecialties: topSpecialties as any, // Mantendo a tipagem flexível para o resultado da consulta SQL
+    topDoctors: topDoctors as any,
+    topSpecialties: topSpecialties as any,
     todayAppointments: adaptedTodayAppointments,
     dailyAppointmentsData,
   };

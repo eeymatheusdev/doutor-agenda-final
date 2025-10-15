@@ -31,17 +31,11 @@ interface DashboardSearchParams {
   to?: string;
 }
 
-/**
- * IMPORTANT:
- * Next (v15+ / recent App Router) types `searchParams` as a Promise.
- * So the prop here must be compatible with that (Promise<...> | undefined).
- */
 interface DashboardPageProps {
   searchParams?: Promise<DashboardSearchParams>;
 }
 
 const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
-  // Resolve searchParams (await works whether next gives a Promise or a plain value at runtime)
   const resolvedSearchParams = await searchParams;
   const from =
     typeof resolvedSearchParams?.from === "string"

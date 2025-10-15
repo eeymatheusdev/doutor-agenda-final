@@ -1,15 +1,10 @@
-import {
-  CalendarIcon,
-  DollarSignIcon,
-  UserIcon,
-  UsersIcon,
-} from "lucide-react";
+// src/app/(protected)/dashboard/_components/stats-cards.tsx
+
+import { CalendarIcon, UserIcon, UsersIcon } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrencyInCents } from "@/helpers/currency";
 
 interface StatsCardsProps {
-  totalRevenue: number | null;
   totalAppointments: number;
   totalPatients: number;
   totalDoctors: number;
@@ -39,7 +34,7 @@ const StatsCards = ({
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
