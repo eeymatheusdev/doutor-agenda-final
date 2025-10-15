@@ -90,26 +90,26 @@ const AppointmentsTableActions = ({
                 href={`/patients/${appointment.patientId}`}
                 className="gap-2"
               >
-                <ClipboardList className="h-4 w-4" />
-                Ver Ficha do Paciente
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Ficha do Paciente
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => openDialog("edit")}>
               <Edit className="mr-2 h-4 w-4" />
-              Editar
+              Editar Agendamento
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => openDialog("finalize")}>
               <Check className="mr-2 h-4 w-4" />
-              Finalizar
+              Finalizar Agendamento
             </DropdownMenuItem>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
-                  className="text-red-600"
+                  className="text-red-500 hover:text-red-500 focus:text-red-500"
                 >
-                  <X className="mr-2 h-4 w-4" />
-                  Cancelar
+                  <X className="mr-2 h-4 w-4 text-red-500" />
+                  Cancelar Agendamento
                 </DropdownMenuItem>
               </AlertDialogTrigger>
               <AlertDialogContent>
