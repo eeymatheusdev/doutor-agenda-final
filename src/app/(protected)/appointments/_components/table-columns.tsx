@@ -19,7 +19,6 @@ export type AppointmentWithRelations = typeof appointmentsTable.$inferSelect & {
   doctor: {
     id: string;
     name: string;
-    // O campo 'specialty' está aqui para compatibilidade de exibição
     specialty: string;
   };
 };
@@ -40,42 +39,32 @@ export const appointmentsTableColumns: ColumnDef<AppointmentWithRelations>[] = [
     },
   },
   {
-    id: "date",
-    accessorKey: "date",
+    id: "appointmentDateTime",
+    accessorKey: "appointmentDateTime",
     header: "Data e Hora",
     cell: (params) => {
       const appointment = params.row.original;
-      return format(new Date(appointment.date), "dd/MM/yyyy 'às' HH:mm", {
-        locale: ptBR,
-      });
+      return format(
+        new Date(appointment.appointmentDateTime),
+        "dd/MM/yyyy 'às' HH:mm",
+        {
+          locale: ptBR,
+        },
+      );
     },
   },
   {
-    id: "procedure", // NOVO CAMPO OBRIGATÓRIO
+    id: "procedure",
     accessorKey: "procedure",
     header: "Procedimento",
   },
   {
-    id: "status", // NOVO CAMPO OBRIGATÓRIO
+    id: "status",
     accessorKey: "status",
     header: "Status",
     cell: (params) => {
       const status = params.row.original.status;
-      // Capitalizando a primeira letra e substituindo '_' por espaço
       return status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
-    },
-  },
-  {
-    id: "price",
-    accessorKey: "appointmentPriceInCents",
-    header: "Valor",
-    cell: (params) => {
-      const appointment = params.row.original;
-      const price = appointment.appointmentPriceInCents / 100;
-      return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }).format(price);
     },
   },
   {

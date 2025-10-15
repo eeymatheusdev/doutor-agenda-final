@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Definição local dos enums (para evitar importação circular)
 const appointmentStatus = z.enum(
-  ["cancelada", "remarcada", "agendada", "atendida", "nao_atendida"],
+  ["agendada", "atendida", "cancelada", "nao_compareceu"],
   {
     required_error: "Status é obrigatório.",
   },
@@ -24,10 +24,10 @@ const dentalProcedure = z.enum(
 );
 
 export const addAppointmentSchema = z.object({
-  patientId: z.string().uuid({
+  patientId: z.string().min(1, {
     message: "Paciente é obrigatório.",
   }),
-  doctorId: z.string().uuid({
+  doctorId: z.string().min(1, {
     message: "Médico é obrigatório.",
   }),
   date: z.date({
@@ -36,10 +36,6 @@ export const addAppointmentSchema = z.object({
   time: z.string().min(1, {
     message: "Horário é obrigatório.",
   }),
-  appointmentPriceInCents: z.number().min(1, {
-    message: "Valor da consulta é obrigatório.",
-  }),
-  // ATUALIZADO: Ambos são OBRIGATÓRIOS
   status: appointmentStatus,
   procedure: dentalProcedure,
 });

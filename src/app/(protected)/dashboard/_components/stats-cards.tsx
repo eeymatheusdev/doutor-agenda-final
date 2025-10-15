@@ -16,17 +16,11 @@ interface StatsCardsProps {
 }
 
 const StatsCards = ({
-  totalRevenue,
   totalAppointments,
   totalPatients,
   totalDoctors,
 }: StatsCardsProps) => {
   const stats = [
-    {
-      title: "Faturamento",
-      value: totalRevenue ? formatCurrencyInCents(totalRevenue) : "R$ 0,00",
-      icon: DollarSignIcon,
-    },
     {
       title: "Agendamentos",
       value: totalAppointments.toString(),

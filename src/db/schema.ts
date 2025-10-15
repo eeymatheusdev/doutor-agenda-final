@@ -160,11 +160,10 @@ export const odontogramStatusEnum = pgEnum("odontogram_status", [
 
 // NOVO: Enum para Status de Agendamento
 export const appointmentStatusEnum = pgEnum("appointment_status", [
-  "cancelada",
-  "remarcada",
   "agendada",
   "atendida",
-  "nao_atendida",
+  "cancelada",
+  "nao_compareceu",
 ]);
 
 // NOVO: Enum para Procedimentos Odontológicos
@@ -579,8 +578,6 @@ export const patientFinancesTableRelations = relations(
 
 export const appointmentsTable = pgTable("appointments", {
   id: uuid("id").defaultRandom().primaryKey(),
-  date: timestamp("date").notNull(),
-  appointmentPriceInCents: integer("appointment_price_in_cents").notNull(),
   clinicId: uuid("clinic_id")
     .notNull()
     .references(() => clinicsTable.id, { onDelete: "cascade" }),
@@ -590,12 +587,13 @@ export const appointmentsTable = pgTable("appointments", {
   doctorId: uuid("doctor_id")
     .notNull()
     .references(() => doctorsTable.id, { onDelete: "cascade" }),
+  status: appointmentStatusEnum("status").notNull(),
+  procedure: dentalProcedureEnum("procedure").notNull(),
+  appointmentDateTime: timestamp("appointmentDateTime").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date()),
-  status: appointmentStatusEnum("status").notNull(),
-  procedure: dentalProcedureEnum("procedure").notNull(),
 });
 
 export const appointmentsTableRelations = relations(

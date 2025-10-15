@@ -46,13 +46,11 @@ import {
 import { doctorsTable, patientsTable } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-// Definição dos enums localmente para o formulário
 const appointmentStatus = [
-  "cancelada",
-  "remarcada",
   "agendada",
   "atendida",
-  "nao_atendida",
+  "cancelada",
+  "nao_compareceu",
 ] as const;
 
 const dentalProcedure = [
@@ -76,16 +74,12 @@ const formSchema = z.object({
   doctorId: z.string().min(1, {
     message: "Médico é obrigatório.",
   }),
-  appointmentPrice: z.number().min(1, {
-    message: "Valor da consulta é obrigatório.",
-  }),
   date: z.date({
     message: "Data é obrigatória.",
   }),
   time: z.string().min(1, {
     message: "Horário é obrigatório.",
   }),
-  // ATUALIZADO: AMBOS SÃO OBRIGATÓRIOS
   procedure: z.enum(dentalProcedure),
   status: z.enum(appointmentStatus),
 });
@@ -112,7 +106,6 @@ const AddAppointmentForm = ({
     defaultValues: {
       patientId: "",
       doctorId: "",
-      appointmentPrice: 0,
       date: undefined,
       time: "",
       procedure: undefined as unknown as DentalProcedure,
@@ -139,7 +132,6 @@ const AddAppointmentForm = ({
       form.reset({
         patientId: "",
         doctorId: "",
-        appointmentPrice: 0,
         date: undefined,
         time: "",
         procedure: undefined,
@@ -161,7 +153,6 @@ const AddAppointmentForm = ({
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     createAppointmentAction.execute({
       ...values,
-      appointmentPriceInCents: values.appointmentPrice * 100,
     });
   };
 
@@ -247,7 +238,6 @@ const AddAppointmentForm = ({
             )}
           />
 
-          {/* NOVO CAMPO: Procedimento (obrigatório) */}
           <FormField
             control={form.control}
             name="procedure"
@@ -277,7 +267,6 @@ const AddAppointmentForm = ({
             )}
           />
 
-          {/* NOVO CAMPO: Status (obrigatório, com default no useForm) */}
           <FormField
             control={form.control}
             name="status"
@@ -287,7 +276,7 @@ const AddAppointmentForm = ({
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
-                  disabled={!isDateTimeEnabled} // Desabilita edição de status se médico/paciente não estiverem selecionados
+                  disabled={!isDateTimeEnabled}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -303,31 +292,6 @@ const AddAppointmentForm = ({
                     ))}
                   </SelectContent>
                 </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="appointmentPrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Valor da consulta</FormLabel>
-                <NumericFormat
-                  value={field.value}
-                  onValueChange={(value) => {
-                    field.onChange(value.floatValue);
-                  }}
-                  decimalScale={2}
-                  fixedDecimalScale
-                  decimalSeparator=","
-                  thousandSeparator="."
-                  prefix="R$ "
-                  allowNegative={false}
-                  disabled={!selectedDoctorId}
-                  customInput={Input}
-                />
                 <FormMessage />
               </FormItem>
             )}

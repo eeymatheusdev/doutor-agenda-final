@@ -37,7 +37,7 @@ export const addAppointment = actionClient
     if (!isTimeAvailable) {
       throw new Error("Time not available");
     }
-    const appointmentDateTime = dayjs(parsedInput.date)
+    const appointmentDate = dayjs(parsedInput.date)
       .set("hour", parseInt(parsedInput.time.split(":")[0]))
       .set("minute", parseInt(parsedInput.time.split(":")[1]))
       .toDate();
@@ -45,7 +45,7 @@ export const addAppointment = actionClient
     await db.insert(appointmentsTable).values({
       ...parsedInput,
       clinicId: session?.user.clinic?.id,
-      date: appointmentDateTime,
+      appointmentDateTime: appointmentDate,
     });
 
     revalidatePath("/appointments");
