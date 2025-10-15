@@ -102,7 +102,7 @@ const UpsertAppointmentForm = ({
   const form = useForm<z.infer<typeof baseSchema>>({
     resolver: zodResolver(
       isFinalizing ? finalizeAppointmentSchema : baseSchema,
-    ),
+    ) as any,
     defaultValues: {
       patientId: "",
       doctorId: "",
@@ -157,7 +157,7 @@ const UpsertAppointmentForm = ({
         appointmentId: appointment?.id,
       });
     },
-    enabled: !!selectedDate && !!selectedDoctorId && !isFinalizing,
+    enabled: !!selectedDate && !!selectedDoctorId,
   });
 
   const timeOptions = useMemo(() => {
@@ -188,7 +188,7 @@ const UpsertAppointmentForm = ({
       onSuccess?.();
     },
     onError: (error) => {
-      toast.error(error.serverError ?? "Erro ao criar agendamento.");
+      toast.error(error.error.serverError ?? "Erro ao criar agendamento.");
     },
   });
 
@@ -202,7 +202,7 @@ const UpsertAppointmentForm = ({
       onSuccess?.();
     },
     onError: (error) => {
-      toast.error(error.serverError ?? "Erro ao atualizar agendamento.");
+      toast.error(error.error.serverError ?? "Erro ao atualizar agendamento.");
     },
   });
 
