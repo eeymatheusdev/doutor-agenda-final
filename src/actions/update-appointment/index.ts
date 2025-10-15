@@ -30,6 +30,7 @@ export const updateAppointment = actionClient
       const availableTimes = await getAvailableTimes({
         doctorId: parsedInput.doctorId,
         date: dayjs(parsedInput.date).format("YYYY-MM-DD"),
+        appointmentId: parsedInput.id, // Correção aqui
       });
       if (!availableTimes?.data) {
         throw new Error("No available times");
