@@ -24,8 +24,8 @@ const AddAppointmentButton = ({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Plus />
-          Novo agendamento
+          <Plus className="h-4 w-4 md:mr-2" />
+          <span className="hidden md:inline">Novo agendamento</span>
         </Button>
       </DialogTrigger>
       <UpsertAppointmentForm

@@ -87,7 +87,7 @@ export function AppointmentsTableFilters({
 
   return (
     <Form {...form}>
-      <form className="flex items-end gap-4">
+      <form className="flex flex-col gap-4 md:flex-row md:items-end">
         <FormField
           control={form.control}
           name="status"
@@ -139,7 +139,7 @@ export function AppointmentsTableFilters({
                       variant={"outline"}
                       disabled={!watchedFilterByDate}
                       className={cn(
-                        "w-[240px] pl-3 text-left font-normal",
+                        "w-full pl-3 text-left font-normal md:w-[240px]",
                         !field.value && "text-muted-foreground",
                       )}
                     >
