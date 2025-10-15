@@ -10,7 +10,7 @@ import { appointmentsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { actionClient } from "@/lib/next-safe-action";
 
-export const deleteAppointment = actionClient
+export const cancelAppointment = actionClient
   .schema(
     z.object({
       id: z.string().uuid(),
@@ -33,7 +33,10 @@ export const deleteAppointment = actionClient
       throw new Error("Agendamento não encontrado");
     }
     await db
-      .delete(appointmentsTable)
+      .update(appointmentsTable)
+      .set({
+        status: "cancelada",
+      })
       .where(eq(appointmentsTable.id, parsedInput.id));
     revalidatePath("/appointments");
   });

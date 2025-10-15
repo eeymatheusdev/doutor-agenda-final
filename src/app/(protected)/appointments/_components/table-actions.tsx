@@ -1,10 +1,19 @@
 "use client";
 
-import { MoreVerticalIcon, TrashIcon } from "lucide-react";
+import {
+  Check,
+  ClipboardList,
+  Edit,
+  MoreVerticalIcon,
+  TrashIcon,
+  X,
+} from "lucide-react";
+import Link from "next/link";
 import { useAction } from "next-safe-action/hooks";
+import { useState } from "react";
 import { toast } from "sonner";
 
-import { deleteAppointment } from "@/actions/delete-appointment";
+import { cancelAppointment } from "@/actions/cancel-appointment";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,81 +35,113 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { appointmentsTable } from "@/db/schema";
+import { doctorsTable, patientsTable } from "@/db/schema";
 
-type AppointmentWithRelations = typeof appointmentsTable.$inferSelect & {
-  patient: {
-    id: string;
-    name: string;
-    email: string;
-    phoneNumber: string;
-    sex: "male" | "female";
-  };
-  doctor: {
-    id: string;
-    name: string;
-    specialty: string;
-  };
-};
+import { AppointmentWithRelations } from "./table-columns";
+import UpsertAppointmentForm from "./upsert-appointment-form";
 
 interface AppointmentsTableActionsProps {
   appointment: AppointmentWithRelations;
+  patients: (typeof patientsTable.$inferSelect)[];
+  doctors: (typeof doctorsTable.$inferSelect)[];
 }
 
 const AppointmentsTableActions = ({
   appointment,
+  patients,
+  doctors,
 }: AppointmentsTableActionsProps) => {
-  const deleteAppointmentAction = useAction(deleteAppointment, {
+  const [upsertDialogIsOpen, setUpsertDialogIsOpen] = useState(false);
+  const [formType, setFormType] = useState<"edit" | "finalize">("edit");
+
+  const cancelAppointmentAction = useAction(cancelAppointment, {
     onSuccess: () => {
-      toast.success("Agendamento deletado com sucesso.");
+      toast.success("Agendamento cancelado com sucesso.");
     },
     onError: () => {
-      toast.error("Erro ao deletar agendamento.");
+      toast.error("Erro ao cancelar agendamento.");
     },
   });
 
-  const handleDeleteAppointmentClick = () => {
+  const handleCancelAppointmentClick = () => {
     if (!appointment) return;
-    deleteAppointmentAction.execute({ id: appointment.id });
+    cancelAppointmentAction.execute({ id: appointment.id });
+  };
+
+  const openDialog = (type: "edit" | "finalize") => {
+    setFormType(type);
+    setUpsertDialogIsOpen(true);
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger>
-        <Button variant="ghost" size="icon">
-          <MoreVerticalIcon className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuLabel>{appointment.patient.name}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              <TrashIcon />
-              Excluir
+    <>
+      <Dialog open={upsertDialogIsOpen} onOpenChange={setUpsertDialogIsOpen}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVerticalIcon className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuLabel>{appointment.patient.name}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/patients/${appointment.patientId}`}
+                className="gap-2"
+              >
+                <ClipboardList className="h-4 w-4" />
+                Ver Ficha do Paciente
+              </Link>
             </DropdownMenuItem>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                Tem certeza que deseja deletar esse agendamento?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                Essa ação não pode ser revertida. Isso irá deletar o agendamento
-                permanentemente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteAppointmentClick}>
-                Deletar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <DropdownMenuItem onClick={() => openDialog("edit")}>
+              <Edit className="mr-2 h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openDialog("finalize")}>
+              <Check className="mr-2 h-4 w-4" />
+              Finalizar
+            </DropdownMenuItem>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem
+                  onSelect={(e) => e.preventDefault()}
+                  className="text-red-600"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Cancelar
+                </DropdownMenuItem>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Tem certeza que deseja cancelar esse agendamento?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Essa ação não pode ser revertida. Isso irá alterar o status
+                    do agendamento para &quot;Cancelada&quot;.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Voltar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleCancelAppointmentClick}>
+                    Cancelar Agendamento
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <UpsertAppointmentForm
+          isOpen={upsertDialogIsOpen}
+          appointment={appointment}
+          patients={patients}
+          doctors={doctors}
+          onSuccess={() => setUpsertDialogIsOpen(false)}
+          type={formType}
+        />
+      </Dialog>
+    </>
   );
 };
 

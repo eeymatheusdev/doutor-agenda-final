@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-import { appointmentsTable } from "@/db/schema";
+import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
 
 import AppointmentsTableActions from "./table-actions";
 
@@ -71,7 +71,14 @@ export const appointmentsTableColumns: ColumnDef<AppointmentWithRelations>[] = [
     id: "actions",
     cell: (params) => {
       const appointment = params.row.original;
-      return <AppointmentsTableActions appointment={appointment} />;
+      // Esta parte será sobrescrita na `page.tsx` para passar os props necessários
+      return (
+        <AppointmentsTableActions
+          appointment={appointment}
+          patients={[]}
+          doctors={[]}
+        />
+      );
     },
   },
 ];

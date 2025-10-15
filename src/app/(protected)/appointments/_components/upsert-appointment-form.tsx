@@ -1,3 +1,5 @@
+"use client";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -7,12 +9,12 @@ import { CalendarIcon } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { NumericFormat } from "react-number-format";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { addAppointment } from "@/actions/add-appointment";
 import { getAvailableTimes } from "@/actions/get-available-times";
+import { updateAppointment } from "@/actions/update-appointment";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -30,7 +32,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -43,29 +44,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { doctorsTable, patientsTable } from "@/db/schema";
+import {
+  appointmentStatusEnum,
+  dentalProcedureEnum,
+  doctorsTable,
+  patientsTable,
+} from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-const appointmentStatus = [
-  "agendada",
-  "atendida",
-  "cancelada",
-  "nao_compareceu",
-] as const;
-
-const dentalProcedure = [
-  "Avaliação Inicial",
-  "Limpeza (Profilaxia)",
-  "Restauração",
-  "Extração",
-  "Tratamento de Canal (Endodontia)",
-  "Clareamento Dental",
-  "Implante Dentário",
-  "Consulta de Retorno",
-] as const;
-
-type AppointmentStatus = (typeof appointmentStatus)[number];
-type DentalProcedure = (typeof dentalProcedure)[number];
+import { AppointmentWithRelations } from "./table-columns";
 
 const formSchema = z.object({
   patientId: z.string().min(1, {
@@ -80,38 +67,55 @@ const formSchema = z.object({
   time: z.string().min(1, {
     message: "Horário é obrigatório.",
   }),
-  procedure: z.enum(dentalProcedure),
-  status: z.enum(appointmentStatus),
+  procedure: z.enum(dentalProcedureEnum.enumValues),
+  status: z.enum(appointmentStatusEnum.enumValues),
 });
 
-interface AddAppointmentFormProps {
+interface UpsertAppointmentFormProps {
   isOpen: boolean;
   patients: (typeof patientsTable.$inferSelect)[];
-  // Ajustando o tipo do doctor para specialties (array)
-  doctors: (Omit<typeof doctorsTable.$inferSelect, "specialties"> & {
-    specialties: string[];
-  })[];
+  doctors: (typeof doctorsTable.$inferSelect)[];
   onSuccess?: () => void;
+  appointment?: AppointmentWithRelations;
+  type?: "edit" | "finalize";
 }
 
-const AddAppointmentForm = ({
+const UpsertAppointmentForm = ({
   patients,
   doctors,
   onSuccess,
   isOpen,
-}: AddAppointmentFormProps) => {
+  appointment,
+  type = "edit",
+}: UpsertAppointmentFormProps) => {
   const form = useForm<z.infer<typeof formSchema>>({
     shouldUnregister: true,
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      patientId: "",
-      doctorId: "",
-      date: undefined,
-      time: "",
-      procedure: undefined as unknown as DentalProcedure,
-      status: "agendada" as AppointmentStatus,
-    },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      if (appointment) {
+        form.reset({
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          date: new Date(appointment.appointmentDateTime),
+          time: format(new Date(appointment.appointmentDateTime), "HH:mm:ss"),
+          procedure: appointment.procedure,
+          status: type === "finalize" ? "atendida" : appointment.status,
+        });
+      } else {
+        form.reset({
+          patientId: "",
+          doctorId: "",
+          date: undefined,
+          time: "",
+          procedure: undefined,
+          status: "agendada",
+        });
+      }
+    }
+  }, [isOpen, appointment, form, type]);
 
   const selectedDoctorId = form.watch("doctorId");
   const selectedPatientId = form.watch("patientId");
@@ -127,19 +131,6 @@ const AddAppointmentForm = ({
     enabled: !!selectedDate && !!selectedDoctorId,
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      form.reset({
-        patientId: "",
-        doctorId: "",
-        date: undefined,
-        time: "",
-        procedure: undefined,
-        status: "agendada" as (typeof appointmentStatus)[number],
-      });
-    }
-  }, [isOpen, form]);
-
   const createAppointmentAction = useAction(addAppointment, {
     onSuccess: () => {
       toast.success("Agendamento criado com sucesso.");
@@ -150,10 +141,25 @@ const AddAppointmentForm = ({
     },
   });
 
+  const updateAppointmentAction = useAction(updateAppointment, {
+    onSuccess: () => {
+      toast.success("Agendamento atualizado com sucesso.");
+      onSuccess?.();
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar agendamento.");
+    },
+  });
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    createAppointmentAction.execute({
-      ...values,
-    });
+    if (appointment) {
+      updateAppointmentAction.execute({
+        ...values,
+        id: appointment.id,
+      });
+    } else {
+      createAppointmentAction.execute(values);
+    }
   };
 
   const isDateAvailable = (date: Date) => {
@@ -169,14 +175,23 @@ const AddAppointmentForm = ({
     );
   };
 
-  const isDateTimeEnabled = selectedPatientId && selectedDoctorId;
+  const isFinalizing = type === "finalize";
+  const isEditing = !!appointment;
 
   return (
     <DialogContent className="sm:max-w-[500px]">
       <DialogHeader>
-        <DialogTitle>Novo agendamento</DialogTitle>
+        <DialogTitle>
+          {isEditing
+            ? isFinalizing
+              ? "Finalizar Agendamento"
+              : "Editar Agendamento"
+            : "Novo agendamento"}
+        </DialogTitle>
         <DialogDescription>
-          Crie um novo agendamento para sua clínica.
+          {isEditing
+            ? "Atualize as informações do agendamento."
+            : "Crie um novo agendamento para sua clínica."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -190,6 +205,7 @@ const AddAppointmentForm = ({
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
+                  disabled={isFinalizing || isEditing}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -218,6 +234,7 @@ const AddAppointmentForm = ({
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
+                  disabled={isFinalizing && isEditing}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -227,8 +244,7 @@ const AddAppointmentForm = ({
                   <SelectContent>
                     {doctors.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
-                        {doctor.name} -{" "}
-                        {doctor.specialties[0] ?? "Sem especialidade"}
+                        {doctor.name} - {doctor.specialties[0]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -244,18 +260,14 @@ const AddAppointmentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Procedimento</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={!isDateTimeEnabled}
-                >
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecione o procedimento" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {dentalProcedure.map((procedure) => (
+                    {dentalProcedureEnum.enumValues.map((procedure) => (
                       <SelectItem key={procedure} value={procedure}>
                         {procedure}
                       </SelectItem>
@@ -275,8 +287,8 @@ const AddAppointmentForm = ({
                 <FormLabel>Status</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={!isDateTimeEnabled}
+                  value={field.value}
+                  disabled={isFinalizing}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -284,7 +296,7 @@ const AddAppointmentForm = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {appointmentStatus.map((status) => (
+                    {appointmentStatusEnum.enumValues.map((status) => (
                       <SelectItem key={status} value={status}>
                         {status.charAt(0).toUpperCase() +
                           status.slice(1).replace("_", " ")}
@@ -308,7 +320,7 @@ const AddAppointmentForm = ({
                     <FormControl>
                       <Button
                         variant={"outline"}
-                        disabled={!isDateTimeEnabled}
+                        disabled={isFinalizing}
                         className={cn(
                           "w-full justify-start text-left font-normal",
                           !field.value && "text-muted-foreground",
@@ -348,8 +360,8 @@ const AddAppointmentForm = ({
                 <FormLabel>Horário</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={!isDateTimeEnabled || !selectedDate}
+                  value={field.value}
+                  disabled={isFinalizing || !selectedDate}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -374,10 +386,17 @@ const AddAppointmentForm = ({
           />
 
           <DialogFooter>
-            <Button type="submit" disabled={createAppointmentAction.isPending}>
-              {createAppointmentAction.isPending
-                ? "Criando..."
-                : "Criar agendamento"}
+            <Button
+              type="submit"
+              disabled={
+                createAppointmentAction.isPending ||
+                updateAppointmentAction.isPending
+              }
+            >
+              {createAppointmentAction.isPending ||
+              updateAppointmentAction.isPending
+                ? "Salvando..."
+                : "Salvar"}
             </Button>
           </DialogFooter>
         </form>
@@ -386,4 +405,4 @@ const AddAppointmentForm = ({
   );
 };
 
-export default AddAppointmentForm;
+export default UpsertAppointmentForm;

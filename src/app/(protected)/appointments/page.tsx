@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import dayjs from "dayjs";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -13,16 +14,30 @@ import {
   PageTitle,
 } from "@/components/ui/page-container";
 import { db } from "@/db";
-import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
+import {
+  appointmentsTable,
+  appointmentStatusEnum,
+  doctorsTable,
+  patientsTable,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 import AddAppointmentButton from "./_components/add-appointment-button";
+import { AppointmentsTableFilters } from "./_components/appointments-table-filters";
+import AppointmentsTableActions from "./_components/table-actions";
 import {
   appointmentsTableColumns,
   AppointmentWithRelations,
 } from "./_components/table-columns";
 
-const AppointmentsPage = async () => {
+interface AppointmentsPageProps {
+  searchParams: Promise<{
+    status?: (typeof appointmentStatusEnum.enumValues)[number];
+    date?: string;
+  }>;
+}
+
+const AppointmentsPage = async ({ searchParams }: AppointmentsPageProps) => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -35,6 +50,12 @@ const AppointmentsPage = async () => {
   if (!session.user.plan) {
     redirect("/new-subscription");
   }
+
+  const resolvedSearchParams = await searchParams;
+  const { status, date } = resolvedSearchParams;
+  const filterDate = date ? dayjs(date).toDate() : new Date();
+  const filterStatus = status || "agendada";
+
   const [patients, doctors, appointments] = await Promise.all([
     db.query.patientsTable.findMany({
       where: eq(patientsTable.clinicId, session.user.clinic.id),
@@ -43,7 +64,18 @@ const AppointmentsPage = async () => {
       where: eq(doctorsTable.clinicId, session.user.clinic.id),
     }),
     db.query.appointmentsTable.findMany({
-      where: eq(appointmentsTable.clinicId, session.user.clinic.id),
+      where: and(
+        eq(appointmentsTable.clinicId, session.user.clinic.id),
+        eq(appointmentsTable.status, filterStatus),
+        gte(
+          appointmentsTable.appointmentDateTime,
+          dayjs(filterDate).startOf("day").toDate(),
+        ),
+        lte(
+          appointmentsTable.appointmentDateTime,
+          dayjs(filterDate).endOf("day").toDate(),
+        ),
+      ),
       with: {
         patient: true,
         doctor: true,
@@ -59,6 +91,22 @@ const AppointmentsPage = async () => {
     },
   })) as AppointmentWithRelations[];
 
+  const columns = appointmentsTableColumns.map((column) => {
+    if (column.id === "actions") {
+      return {
+        ...column,
+        cell: ({ row }: { row: { original: AppointmentWithRelations } }) => (
+          <AppointmentsTableActions
+            appointment={row.original}
+            patients={patients}
+            doctors={doctors}
+          />
+        ),
+      };
+    }
+    return column;
+  });
+
   return (
     <PageContainer>
       <PageHeader>
@@ -73,10 +121,11 @@ const AppointmentsPage = async () => {
         </PageActions>
       </PageHeader>
       <PageContent>
-        <DataTable
-          data={adaptedAppointments}
-          columns={appointmentsTableColumns}
+        <AppointmentsTableFilters
+          defaultStatus={filterStatus}
+          defaultDate={filterDate}
         />
+        <DataTable data={adaptedAppointments} columns={columns} />
       </PageContent>
     </PageContainer>
   );

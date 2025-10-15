@@ -163,7 +163,6 @@ export const appointmentStatusEnum = pgEnum("appointment_status", [
   "agendada",
   "atendida",
   "cancelada",
-  "nao_compareceu",
 ]);
 
 // NOVO: Enum para Procedimentos Odontológicos

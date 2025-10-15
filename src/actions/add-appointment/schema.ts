@@ -1,12 +1,9 @@
 import { z } from "zod";
 
 // Definição local dos enums (para evitar importação circular)
-const appointmentStatus = z.enum(
-  ["agendada", "atendida", "cancelada", "nao_compareceu"],
-  {
-    required_error: "Status é obrigatório.",
-  },
-);
+const appointmentStatus = z.enum(["agendada", "atendida", "cancelada"], {
+  required_error: "Status é obrigatório.",
+});
 const dentalProcedure = z.enum(
   [
     "Avaliação Inicial",
