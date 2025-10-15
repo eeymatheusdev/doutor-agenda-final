@@ -1,3 +1,4 @@
+// src/app/(protected)/appointments/_components/table-actions.tsx
 "use client";
 
 import {
@@ -9,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // Importado
+import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -52,7 +53,7 @@ const AppointmentsTableActions = ({
   patients,
   doctors,
 }: AppointmentsTableActionsProps) => {
-  const router = useRouter(); // Adicionado
+  const router = useRouter();
   const [upsertDialogIsOpen, setUpsertDialogIsOpen] = useState(false);
   const [formType, setFormType] = useState<"edit" | "finalize">("edit");
 
@@ -75,6 +76,8 @@ const AppointmentsTableActions = ({
     setUpsertDialogIsOpen(true);
   };
 
+  const isAgendada = appointment.status === "agendada";
+
   return (
     <>
       <Dialog open={upsertDialogIsOpen} onOpenChange={setUpsertDialogIsOpen}>
@@ -87,7 +90,6 @@ const AppointmentsTableActions = ({
           <DropdownMenuContent>
             <DropdownMenuLabel>{appointment.patient.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {/* CORREÇÃO: Navegação com onSelect */}
             <DropdownMenuItem
               onSelect={() => router.push(`/patients/${appointment.patientId}`)}
               className="gap-2"
@@ -95,14 +97,17 @@ const AppointmentsTableActions = ({
               <ClipboardList className="mr-2 h-4 w-4" />
               Ficha do Paciente
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => openDialog("edit")}>
+            <DropdownMenuItem
+              onClick={() => openDialog("edit")}
+              disabled={!isAgendada}
+            >
               <Edit className="mr-2 h-4 w-4" />
               Editar Agendamento
             </DropdownMenuItem>
-            {/* CORREÇÃO: Cor ajustada */}
             <DropdownMenuItem
               onClick={() => openDialog("finalize")}
               className="text-primary focus:text-primary"
+              disabled={!isAgendada}
             >
               <Check className="text-primary focus:text-primary mr-2 h-4 w-4" />
               Finalizar Agendamento
@@ -112,6 +117,7 @@ const AppointmentsTableActions = ({
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
                   className="text-red-500 hover:text-red-500 focus:text-red-500"
+                  disabled={!isAgendada}
                 >
                   <X className="mr-2 h-4 w-4 text-red-500" />
                   Cancelar Agendamento

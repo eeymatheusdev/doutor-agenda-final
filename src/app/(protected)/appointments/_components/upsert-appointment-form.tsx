@@ -406,9 +406,8 @@ const UpsertAppointmentForm = ({
                       selected={field.value}
                       onSelect={field.onChange}
                       disabled={(date) =>
-                        !isEditing &&
-                        (date < dayjs().startOf("day").toDate() ||
-                          !isDateAvailable(date))
+                        date < dayjs().startOf("day").toDate() ||
+                        !isDateAvailable(date)
                       }
                       initialFocus
                     />
