@@ -1,5 +1,3 @@
-// src/data/get-dashboard.ts
-
 import dayjs from "dayjs";
 import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 
@@ -29,6 +27,8 @@ export const getDashboard = async ({ from, to, session }: Params) => {
     topSpecialties,
     todayAppointments,
     dailyAppointmentsData,
+    patients,
+    doctors,
   ] = await Promise.all([
     db
       .select({
@@ -129,6 +129,12 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       )
       .groupBy(sql`DATE(${appointmentsTable.appointmentDateTime})`)
       .orderBy(sql`DATE(${appointmentsTable.appointmentDateTime})`),
+    db.query.patientsTable.findMany({
+      where: eq(patientsTable.clinicId, session.user.clinic.id),
+    }),
+    db.query.doctorsTable.findMany({
+      where: eq(doctorsTable.clinicId, session.user.clinic.id),
+    }),
   ]);
 
   const adaptedTodayAppointments = todayAppointments.map((a) => ({
@@ -148,5 +154,7 @@ export const getDashboard = async ({ from, to, session }: Params) => {
     topSpecialties: topSpecialties as any,
     todayAppointments: adaptedTodayAppointments,
     dailyAppointmentsData,
+    patients,
+    doctors,
   };
 };

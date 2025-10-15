@@ -3,7 +3,6 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { DataTable } from "@/components/ui/data-table";
 import {
   PageActions,
   PageContainer,
@@ -23,12 +22,9 @@ import {
 import { auth } from "@/lib/auth";
 
 import AddAppointmentButton from "./_components/add-appointment-button";
+import { AppointmentsDataTable } from "./_components/appointments-data-table";
 import { AppointmentsTableFilters } from "./_components/appointments-table-filters";
-import AppointmentsTableActions from "./_components/table-actions";
-import {
-  appointmentsTableColumns,
-  AppointmentWithRelations,
-} from "./_components/table-columns";
+import { AppointmentWithRelations } from "./_components/table-columns";
 
 interface AppointmentsPageProps {
   searchParams: Promise<{
@@ -91,22 +87,6 @@ const AppointmentsPage = async ({ searchParams }: AppointmentsPageProps) => {
     },
   })) as AppointmentWithRelations[];
 
-  const columns = appointmentsTableColumns.map((column) => {
-    if (column.id === "actions") {
-      return {
-        ...column,
-        cell: ({ row }: { row: { original: AppointmentWithRelations } }) => (
-          <AppointmentsTableActions
-            appointment={row.original}
-            patients={patients}
-            doctors={doctors}
-          />
-        ),
-      };
-    }
-    return column;
-  });
-
   return (
     <PageContainer>
       <PageHeader>
@@ -125,7 +105,11 @@ const AppointmentsPage = async ({ searchParams }: AppointmentsPageProps) => {
           defaultStatus={filterStatus}
           defaultDate={filterDate}
         />
-        <DataTable data={adaptedAppointments} columns={columns} />
+        <AppointmentsDataTable
+          data={adaptedAppointments}
+          patients={patients}
+          doctors={doctors}
+        />
       </PageContent>
     </PageContainer>
   );
