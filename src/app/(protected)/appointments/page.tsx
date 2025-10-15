@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, lte, SQL } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -49,35 +49,43 @@ const AppointmentsPage = async ({ searchParams }: AppointmentsPageProps) => {
 
   const resolvedSearchParams = await searchParams;
   const { status, date } = resolvedSearchParams;
-  const filterDate = date ? dayjs(date).toDate() : new Date();
+  const filterDate = date ? dayjs(date).toDate() : undefined;
   const filterStatus = status || "agendada";
 
-  const [patients, doctors, appointments] = await Promise.all([
+  const [patients, doctors] = await Promise.all([
     db.query.patientsTable.findMany({
       where: eq(patientsTable.clinicId, session.user.clinic.id),
     }),
     db.query.doctorsTable.findMany({
       where: eq(doctorsTable.clinicId, session.user.clinic.id),
     }),
-    db.query.appointmentsTable.findMany({
-      where: and(
-        eq(appointmentsTable.clinicId, session.user.clinic.id),
-        eq(appointmentsTable.status, filterStatus),
-        gte(
-          appointmentsTable.appointmentDateTime,
-          dayjs(filterDate).startOf("day").toDate(),
-        ),
-        lte(
-          appointmentsTable.appointmentDateTime,
-          dayjs(filterDate).endOf("day").toDate(),
-        ),
-      ),
-      with: {
-        patient: true,
-        doctor: true,
-      },
-    }),
   ]);
+
+  const whereConditions: (SQL | undefined)[] = [
+    eq(appointmentsTable.clinicId, session.user.clinic.id),
+    eq(appointmentsTable.status, filterStatus),
+  ];
+
+  if (filterDate) {
+    whereConditions.push(
+      gte(
+        appointmentsTable.appointmentDateTime,
+        dayjs(filterDate).startOf("day").toDate(),
+      ),
+      lte(
+        appointmentsTable.appointmentDateTime,
+        dayjs(filterDate).endOf("day").toDate(),
+      ),
+    );
+  }
+
+  const appointments = await db.query.appointmentsTable.findMany({
+    where: and(...whereConditions),
+    with: {
+      patient: true,
+      doctor: true,
+    },
+  });
 
   const adaptedAppointments = appointments.map((appointment) => ({
     ...appointment,
