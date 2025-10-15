@@ -122,7 +122,7 @@ const UpsertAppointmentForm = ({
           date: new Date(appointment.appointmentDateTime),
           time: format(new Date(appointment.appointmentDateTime), "HH:mm:ss"),
           procedure: appointment.procedure,
-          status: isFinalizing ? "atendida" : appointment.status,
+          status: isFinalizing ? "atendida" : "agendada",
         });
       } else {
         form.reset({
@@ -353,7 +353,7 @@ const UpsertAppointmentForm = ({
                 <Select
                   onValueChange={field.onChange}
                   value={field.value}
-                  disabled={isFinalizing}
+                  disabled
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -362,7 +362,11 @@ const UpsertAppointmentForm = ({
                   </FormControl>
                   <SelectContent>
                     {appointmentStatusEnum.enumValues.map((status) => (
-                      <SelectItem key={status} value={status}>
+                      <SelectItem
+                        key={status}
+                        value={status}
+                        disabled={status === "cancelada"}
+                      >
                         {status.charAt(0).toUpperCase() +
                           status.slice(1).replace("_", " ")}
                       </SelectItem>
@@ -441,8 +445,7 @@ const UpsertAppointmentForm = ({
                         value={time.value}
                         disabled={!time.available}
                       >
-                        {time.label}{" "}
-                        {!time.available && !isEditing && "(Indisponível)"}
+                        {time.label} {!time.available && "(Indisponível)"}
                       </SelectItem>
                     ))}
                   </SelectContent>
