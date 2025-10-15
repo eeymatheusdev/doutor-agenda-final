@@ -193,12 +193,12 @@ const UpsertAppointmentForm = ({
   });
 
   const updateAppointmentAction = useAction(updateAppointment, {
-    onSuccess: () => {
-      toast.success(
-        isFinalizing
-          ? "Agendamento finalizado com sucesso."
-          : "Agendamento atualizado com sucesso.",
-      );
+    onSuccess: ({ input }) => {
+      if (input.status === "atendida") {
+        toast.success("Agendamento finalizado com sucesso.");
+      } else {
+        toast.success("Agendamento atualizado com sucesso.");
+      }
       onSuccess?.();
     },
     onError: (error) => {
