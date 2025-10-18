@@ -4,6 +4,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc"; // Importe o plugin UTC se for usar UTC
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { XIcon } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
@@ -59,6 +61,7 @@ import {
   employeeRoles,
 } from "../_constants"; // Importa as novas constantes
 
+dayjs.extend(utc); // Estenda o dayjs com o plugin UTC se necessário
 // Interface para o tipo de funcionário, adaptada da interface Doctor
 interface Employee
   extends Omit<
@@ -75,8 +78,20 @@ interface UpsertEmployeeFormProps {
   onSuccess?: () => void;
 }
 
-const parseDate = (dateString: string | null | undefined) =>
-  dateString ? new Date(dateString) : undefined;
+const parseDate = (dateString: string | null | undefined) => {
+  if (!dateString) return undefined;
+
+  // Cria um objeto Date a partir da string de data recebida.
+  const date = new Date(dateString);
+
+  // getTimezoneOffset() retorna a diferença em minutos entre o UTC e a hora local.
+  const timezoneOffset = date.getTimezoneOffset();
+
+  // Adicionamos os minutos do offset de volta à data para corrigir o deslocamento.
+  date.setMinutes(date.getMinutes() + timezoneOffset);
+
+  return date;
+};
 
 const UpsertEmployeeForm = ({
   employee, // Usa o tipo Employee

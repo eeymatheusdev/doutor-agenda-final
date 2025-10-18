@@ -3,6 +3,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc"; // Importe o plugin UTC se for usar UTC
 import { CalendarIcon, XIcon } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
@@ -12,6 +14,7 @@ import { PatternFormat } from "react-number-format";
 import { toast } from "sonner";
 import { z } from "zod";
 
+// Não precisa do plugin UTC para esta correção específica
 import { upsertDoctor } from "@/actions/upsert-doctor";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -56,6 +59,7 @@ import {
   DentalSpecialty,
 } from "../_constants";
 
+dayjs.extend(utc);
 // Array de todas as chaves de estado para o Zod enum
 const allBrazilianStates = Object.keys(BrazilianState) as [
   keyof typeof BrazilianState,
@@ -153,8 +157,23 @@ interface UpsertDoctorFormProps {
   onSuccess?: () => void;
 }
 
-const parseDate = (dateString: string | null | undefined) =>
-  dateString ? new Date(dateString) : undefined;
+const parseDate = (dateString: string | null | undefined) => {
+  if (!dateString) return undefined;
+
+  // Cria um objeto Date a partir da string de data recebida.
+  const date = new Date(dateString);
+
+  // getTimezoneOffset() retorna a diferença em minutos entre o UTC e a hora local.
+  // Para o Brasil (GMT-3), o valor é 180.
+  const timezoneOffset = date.getTimezoneOffset();
+
+  // Adicionamos os minutos do offset de volta à data.
+  // Isso efetivamente converte a data de volta para o horário UTC,
+  // corrigindo o deslocamento de um dia.
+  date.setMinutes(date.getMinutes() + timezoneOffset);
+
+  return date;
+};
 
 const UpsertDoctorForm = ({
   doctor,
