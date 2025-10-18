@@ -368,7 +368,9 @@ const UpsertDoctorForm = ({
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? (
-                              format(field.value, "PPP", { locale: ptBR })
+                              format(field.value, "dd/MM/yyyy", {
+                                locale: ptBR,
+                              })
                             ) : (
                               <span>Selecione</span>
                             )}
@@ -378,11 +380,8 @@ const UpsertDoctorForm = ({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          captionLayout="dropdown-buttons"
                           selected={field.value}
                           onSelect={field.onChange}
-                          fromYear={1950}
-                          toYear={new Date().getFullYear()}
                           initialFocus
                           locale={ptBR}
                         />

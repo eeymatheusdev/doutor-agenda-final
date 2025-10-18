@@ -397,7 +397,7 @@ const UpsertAppointmentForm = ({
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {field.value ? (
-                            format(field.value, "PPP", { locale: ptBR })
+                            format(field.value, "dd/MM/yyyy", { locale: ptBR })
                           ) : (
                             <span>Selecione uma data</span>
                           )}
@@ -414,6 +414,7 @@ const UpsertAppointmentForm = ({
                           !isDateAvailable(date)
                         }
                         initialFocus
+                        locale={ptBR} // Adicionado locale ptBR
                       />
                     </PopoverContent>
                   </Popover>
