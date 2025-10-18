@@ -415,6 +415,7 @@ const UpsertAppointmentForm = ({
                         }
                         initialFocus
                         locale={ptBR} // Adicionado locale ptBR
+                        captionLayout="dropdown"
                       />
                     </PopoverContent>
                   </Popover>

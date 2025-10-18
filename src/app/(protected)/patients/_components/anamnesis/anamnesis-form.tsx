@@ -165,7 +165,6 @@ const AnamnesisForm = ({
                 mode="single"
                 selected={field.value as Date}
                 onSelect={(date) => field.onChange(date)}
-                captionLayout="dropdown-buttons"
                 initialFocus
                 locale={ptBR}
               />

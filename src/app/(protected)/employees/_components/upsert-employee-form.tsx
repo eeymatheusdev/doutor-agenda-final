@@ -360,6 +360,7 @@ const UpsertEmployeeForm = ({
                           onSelect={field.onChange}
                           initialFocus
                           locale={ptBR}
+                          captionLayout="dropdown"
                         />
                       </PopoverContent>
                     </Popover>

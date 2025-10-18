@@ -126,7 +126,6 @@ export default function OdontogramCanvas() {
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                captionLayout="dropdown-buttons"
                 selected={currentDate}
                 onSelect={(date) => {
                   if (date) {
