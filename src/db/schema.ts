@@ -146,6 +146,14 @@ export const toothFaceEnum = pgEnum("tooth_face", [
   "incisal",
 ]);
 
+export const employeeRoleEnum = pgEnum("employee_role", [
+  "Recepcionista",
+  "Auxiliar de Saúde Bucal",
+  "Técnico em Saúde Bucal",
+  "Administrativo",
+  "Gerente",
+]);
+
 // NOVO: Enum para Status/Marcações do Odontograma
 export const odontogramStatusEnum = pgEnum("odontogram_status", [
   "carie",
@@ -327,7 +335,8 @@ export const clinicsTableRelations = relations(clinicsTable, ({ many }) => ({
   appointments: many(appointmentsTable),
   usersToClinics: many(usersToClinicsTable),
   odontograms: many(odontogramsTable),
-  clinicFinances: many(clinicFinancesTable), // Nova Relação
+  clinicFinances: many(clinicFinancesTable),
+  employees: many(employeesTable),
 }));
 
 export const clinicFinancesTable = pgTable("clinic_finances", {
@@ -612,3 +621,46 @@ export const appointmentsTableRelations = relations(
     }),
   }),
 );
+
+export const employeesTable = pgTable("employees", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  avatarImageUrl: text("avatar_image_url"),
+  name: text("name").notNull(),
+  rg: text("rg").notNull(),
+  cpf: text("cpf").notNull(),
+  dateOfBirth: date("date_of_birth").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  whatsApp: text("whatsApp"),
+  role: employeeRoleEnum("role").array().notNull(),
+  observations: text("observations"),
+  education: text("education"),
+
+  // 1 - Monday, 2 - Tuesday, 3 - Wednesday, 4 - Thursday, 5 - Friday, 6 - Saturday, 0 - Sunday
+  availableFromWeekDay: integer("available_from_week_day").notNull(),
+  availableToWeekDay: integer("available_to_week_day").notNull(),
+  availableFromTime: time("available_from_time").notNull(),
+  availableToTime: time("available_to_time").notNull(),
+
+  addressStreet: text("address_street").notNull(),
+  addressNumber: text("address_number").notNull(),
+  addressComplement: text("address_complement"),
+  addressNeighborhood: text("address_neighborhood").notNull(),
+  addressCity: text("address_city").notNull(),
+  addressState: brazilianStateEnum("address_state").notNull(),
+  addressZipcode: text("address_zipcode").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const employeesTableRelations = relations(employeesTable, ({ one }) => ({
+  clinic: one(clinicsTable, {
+    fields: [employeesTable.clinicId],
+    references: [clinicsTable.id],
+  }),
+}));

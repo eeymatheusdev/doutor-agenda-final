@@ -8,6 +8,7 @@ import {
   LogOut,
   Settings,
   Stethoscope,
+  Users,
   UsersRound,
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
@@ -56,6 +57,7 @@ const items = [
   { title: "Agendamentos", url: "/appointments", icon: CalendarDays },
   { title: "Médicos", url: "/doctors", icon: Stethoscope },
   { title: "Pacientes", url: "/patients", icon: UsersRound },
+  { title: "Funcionários", url: "/employees", icon: Users },
   { title: "Financeiro", url: "/financials", icon: DollarSign },
 ];
 
