@@ -26,10 +26,12 @@ import { AppointmentsDataTable } from "./_components/appointments-data-table";
 import { AppointmentsTableFilters } from "./_components/appointments-table-filters";
 import { AppointmentWithRelations } from "./_components/table-columns";
 
+// Interface atualizada para aceitar from e to
 interface AppointmentsPageProps {
   searchParams: Promise<{
     status?: (typeof appointmentStatusEnum.enumValues)[number];
-    date?: string;
+    from?: string; // Data inicial
+    to?: string; // Data final
   }>;
 }
 
@@ -48,8 +50,10 @@ const AppointmentsPage = async ({ searchParams }: AppointmentsPageProps) => {
   }
 
   const resolvedSearchParams = await searchParams;
-  const { status, date } = resolvedSearchParams;
-  const filterDate = date ? dayjs(date).toDate() : undefined;
+  // Desestruturação atualizada para from e to
+  const { status, from, to } = resolvedSearchParams;
+  const filterFromDate = from ? dayjs(from).toDate() : undefined;
+  const filterToDate = to ? dayjs(to).toDate() : undefined;
   const filterStatus = status || "agendada";
 
   const [patients, doctors] = await Promise.all([
@@ -66,15 +70,23 @@ const AppointmentsPage = async ({ searchParams }: AppointmentsPageProps) => {
     eq(appointmentsTable.status, filterStatus),
   ];
 
-  if (filterDate) {
+  // Lógica de filtro de data atualizada para período
+  if (filterFromDate) {
     whereConditions.push(
       gte(
         appointmentsTable.appointmentDateTime,
-        dayjs(filterDate).startOf("day").toDate(),
+        dayjs(filterFromDate).startOf("day").toDate(),
       ),
+    );
+  }
+  // Se 'to' não for definido, mas 'from' sim, filtra até o fim do dia de 'from'
+  if (filterToDate || filterFromDate) {
+    whereConditions.push(
       lte(
         appointmentsTable.appointmentDateTime,
-        dayjs(filterDate).endOf("day").toDate(),
+        dayjs(filterToDate || filterFromDate) // Usa filterFromDate se filterToDate for nulo
+          .endOf("day")
+          .toDate(),
       ),
     );
   }
@@ -109,9 +121,10 @@ const AppointmentsPage = async ({ searchParams }: AppointmentsPageProps) => {
         </PageActions>
       </PageHeader>
       <PageContent>
+        {/* Passa as datas iniciais para o filtro */}
         <AppointmentsTableFilters
           defaultStatus={filterStatus}
-          defaultDate={filterDate}
+          defaultDateRange={{ from: filterFromDate, to: filterToDate }}
         />
         <AppointmentsDataTable
           data={adaptedAppointments}
