@@ -1,5 +1,4 @@
 // src/app/(protected)/dashboard/_components/appointments-chart.tsx
-
 "use client";
 
 import "dayjs/locale/pt-br";
@@ -19,7 +18,7 @@ import {
 } from "@/components/ui/chart";
 
 interface DailyAppointment {
-  date: string;
+  date: string; // Formato YYYY-MM-DD
   appointments: number;
 }
 
@@ -40,8 +39,8 @@ const AppointmentsChart = ({
   const chartData = chartDays.map((date) => {
     const dataForDay = dailyAppointmentsData.find((item) => item.date === date);
     return {
-      date: dayjs(date).format("DD/MM"),
-      fullDate: date,
+      date: dayjs(date).format("DD/MM"), // Label para o eixo X
+      fullDate: date, // Data completa para o tooltip
       appointments: dataForDay?.appointments || 0,
     };
   });
@@ -49,50 +48,52 @@ const AppointmentsChart = ({
   const chartConfig = {
     appointments: {
       label: "Agendamentos",
-      color: "#0B68F7",
+      color: "#0B68F7", // Cor primária (azul)
     },
   } satisfies ChartConfig;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center gap-2">
-        <Calendar />
-        <CardTitle>Agendamentos</CardTitle>
+        <Calendar className="text-muted-foreground" /> {/* Ícone ajustado */}
+        <CardTitle className="text-base">Agendamentos</CardTitle>{" "}
+        {/* Título ajustado */}
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-[200px]">
+        {/* ChartContainer lida com a responsividade. O conteúdo direto deve ser um único elemento ReactElement */}
+        <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
+          {/* O AreaChart é o único filho direto do ChartContainer */}
           <AreaChart
             data={chartData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            margin={{
+              top: 10,
+              right: 10, // Margens ajustadas para melhor visualização
+              left: -20, // Margem negativa para aproximar o eixo Y
+              bottom: 0,
+            }}
           >
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />{" "}
+            {/* Linhas horizontais */}
             <XAxis
               dataKey="date"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-            />
-            <YAxis
-              yAxisId="left"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
             />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              allowDecimals={false} // Garante números inteiros no eixo Y
+            />
             <ChartTooltip
+              cursor={false} // Desabilita o cursor vertical no hover
               content={
                 <ChartTooltipContent
-                  formatter={(value, name) => {
-                    return (
-                      <>
-                        <div className="h-3 w-3 rounded bg-[#0B68F7]" />
-                        <span className="text-muted-foreground">
-                          Agendamentos:
-                        </span>
-                        <span className="font-semibold">{value}</span>
-                      </>
-                    );
-                  }}
+                  indicator="dot" // Usa ponto como indicador
+                  formatter={(value) => [`${value} Agendamento(s)`, null]} // Formata o valor
                   labelFormatter={(label, payload) => {
+                    // Formata a data no tooltip
                     if (payload && payload[0]) {
                       return dayjs(payload[0].payload?.fullDate).format(
                         "DD/MM/YYYY (dddd)",
@@ -103,14 +104,30 @@ const AppointmentsChart = ({
                 />
               }
             />
+            <defs>
+              {/* Gradiente para a área */}
+              <linearGradient id="fillAppointments" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-appointments)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-appointments)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+            </defs>
             <Area
-              yAxisId="left"
-              type="monotone"
               dataKey="appointments"
+              type="natural" // Curva mais suave
+              fill="url(#fillAppointments)" // Usa o gradiente
+              fillOpacity={1} // Opacidade controlada pelo gradiente
               stroke="var(--color-appointments)"
-              fill="var(--color-appointments)"
-              fillOpacity={0.2}
               strokeWidth={2}
+              stackId="a" // Permite empilhar áreas se houver mais de uma
+              dot={false} // Esconde os pontos na linha
             />
           </AreaChart>
         </ChartContainer>

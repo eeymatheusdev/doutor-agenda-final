@@ -1,5 +1,6 @@
+// src/app/(protected)/dashboard/page.tsx
 import dayjs from "dayjs";
-import { Calendar } from "lucide-react";
+import { Calendar, Users } from "lucide-react"; // Mantido Users para stats card
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -21,6 +22,7 @@ import AppointmentsChart from "./_components/appointments-chart";
 import { DatePicker } from "./_components/date-picker";
 import StatsCards from "./_components/stats-cards";
 import TopDoctors from "./_components/top-doctors";
+// REMOVIDO: import TopEmployees from "./_components/top-employees";
 import TopSpecialties from "./_components/top-specialties";
 
 interface DashboardSearchParams {
@@ -58,9 +60,7 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
 
   if (!from || !to) {
     redirect(
-      `/dashboard?from=${dayjs().format("YYYY-MM-DD")}&to=${dayjs()
-        .add(1, "month")
-        .format("YYYY-MM-DD")}`,
+      `/dashboard?from=${dayjs().startOf("month").format("YYYY-MM-DD")}&to=${dayjs().endOf("month").format("YYYY-MM-DD")}`,
     );
   }
 
@@ -68,8 +68,10 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
     totalAppointments,
     totalPatients,
     totalDoctors,
+    totalEmployees, // Mantido para StatsCards
     topDoctors,
     topSpecialties,
+    // REMOVIDO: topEmployees,
     todayAppointments,
     dailyAppointmentsData,
     patients,
@@ -100,33 +102,51 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
         </PageActions>
       </PageHeader>
       <PageContent>
+        {/* Passa o total de funcionários para os cards de estatísticas */}
         <StatsCards
           totalAppointments={totalAppointments.total}
           totalPatients={totalPatients.total}
           totalDoctors={totalDoctors.total}
+          totalEmployees={totalEmployees.total} // Passa o total de funcionários
         />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2.25fr_1fr]">
-          <AppointmentsChart dailyAppointmentsData={dailyAppointmentsData} />
-          <TopDoctors doctors={topDoctors} />
-        </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2.25fr_1fr]">
-          <Card>
+
+        {/* Layout Reorganizado - Ajustado grid para 2 colunas */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-[2fr_1fr]">
+          {/* Coluna 1: Agendamentos de Hoje */}
+          <Card className="lg:col-span-1">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <Calendar className="text-muted-foreground" />
                 <CardTitle className="text-base">
-                  Agendamentos de hoje
+                  Agendamentos de hoje ({todayAppointments.length})
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <AppointmentsDataTable
-                data={todayAppointments}
-                patients={patients}
-                doctors={doctors}
-              />
+              {/* Garante que a tabela não tenha paginação e seja rolável se necessário */}
+              <div className="max-h-[400px] overflow-y-auto">
+                <AppointmentsDataTable
+                  data={todayAppointments}
+                  patients={patients}
+                  doctors={doctors}
+                />
+              </div>
             </CardContent>
           </Card>
+
+          {/* Coluna 2: Top Médicos */}
+          <TopDoctors doctors={topDoctors} />
+
+          {/* REMOVIDO: Coluna 3: Top Funcionários */}
+          {/* <TopEmployees employees={topEmployees} /> */}
+        </div>
+
+        {/* Linha 2: Gráfico de Agendamentos e Top Especialidades */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+          {/* Gráfico */}
+          <AppointmentsChart dailyAppointmentsData={dailyAppointmentsData} />
+
+          {/* Especialidades */}
           <TopSpecialties topSpecialties={topSpecialties} />
         </div>
       </PageContent>
