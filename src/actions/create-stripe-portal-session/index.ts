@@ -2,51 +2,77 @@
 "use server";
 
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import Stripe from "stripe";
+import { z } from "zod"; // Import Zod
 
-import { auth, CustomSession } from "@/lib/auth"; // Import CustomSession type
+import { auth, CustomSession } from "@/lib/auth";
 import { actionClient } from "@/lib/next-safe-action";
 
-export const createStripePortalSession = actionClient.action(async () => {
-  // Use the specific CustomSession type for better type checking
-  const session = (await auth.api.getSession({
-    headers: await headers(),
-  })) as CustomSession | null; // Cast to CustomSession or null
+// Schema de input (vazio, pois não esperamos input)
+const inputSchema = z.undefined();
 
-  // Verifica se o usuário está logado
-  if (!session?.user?.id) {
-    throw new Error("Usuário não autorizado.");
-  }
+// Usa actionClient com validação de schema (apenas para input neste caso)
+export const createStripePortalSession = actionClient
+  .schema(inputSchema) // Define explicitamente que não há schema de input
+  .action(async () => {
+    // Remove o parâmetro de input, pois é undefined
+    const session = (await auth.api.getSession({
+      headers: await headers(),
+    })) as CustomSession | null;
 
-  // Verifica se a chave secreta do Stripe está configurada
-  if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error("Chave secreta do Stripe não configurada.");
-  }
+    // Verifica se o usuário está logado
+    if (!session?.user?.id) {
+      console.error("[Stripe Portal] User not authorized."); // Log de erro no servidor
+      throw new Error("Usuário não autorizado.");
+    }
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2025-05-28.basil", // Use a versão da API do Stripe
+    // Verifica se a chave secreta do Stripe está configurada
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error("[Stripe Portal] Stripe secret key not configured."); // Log de erro no servidor
+      throw new Error("Chave secreta do Stripe não configurada.");
+    }
+
+    const customerId = session.user.stripeCustomerId; // ID do cliente Stripe
+
+    if (!customerId) {
+      console.error(
+        "[Stripe Portal] Stripe customer ID not found in session for user:",
+        session.user.id,
+      ); // Log de erro no servidor
+      throw new Error(
+        "ID de cliente Stripe não encontrado na sessão do usuário.",
+      );
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-05-28.basil",
+    });
+
+    // Define a URL de retorno
+    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/new-subscription`;
+
+    try {
+      console.log(
+        `[Stripe Portal] Creating portal session for customer: ${customerId} with return URL: ${returnUrl}`,
+      ); // Log de tentativa
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: returnUrl,
+      });
+
+      console.log(
+        `[Stripe Portal] Session created successfully: ${portalSession.id}`,
+      ); // Log de sucesso
+      // Retorna o objeto esperado pelo hook useAction
+      return { portalUrl: portalSession.url };
+    } catch (stripeError: any) {
+      console.error(
+        "[Stripe Portal] Stripe Billing Portal Session creation failed:",
+        stripeError,
+      ); // Log detalhado do erro Stripe
+      // Lança um erro que será capturado pelo next-safe-action
+      throw new Error(
+        `Falha ao criar a sessão do portal Stripe: ${stripeError.message || "Erro desconhecido"}`,
+      );
+    }
   });
-
-  // Define a URL de retorno após o usuário interagir com o portal
-  // Redireciona para a página de nova assinatura após o cancelamento
-  const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/new-subscription`;
-
-  const customerId = session.user.stripeCustomerId; // ID do cliente Stripe
-
-  if (!customerId) {
-    // Adiciona uma verificação extra caso stripeCustomerId seja null/undefined na sessão
-    throw new Error(
-      "ID de cliente Stripe não encontrado na sessão do usuário.",
-    );
-  }
-
-  // Cria a sessão do Portal de Faturamento
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: returnUrl,
-  });
-
-  // Retorna a URL do portal para redirecionamento no cliente
-  return { portalUrl: portalSession.url };
-});
