@@ -30,7 +30,7 @@ interface SubscriptionPlanCardProps {
   planType: "monthly" | "semiannual" | "annual";
   features?: string[];
   isCurrentPlan?: boolean;
-  hasActiveSubscription?: boolean;
+  hasActiveSubscription?: boolean; // <-- Nova prop
   userEmail: string;
   className?: string;
 }
@@ -43,7 +43,7 @@ export function SubscriptionPlanCard({
   priceId,
   planType,
   isCurrentPlan = false,
-  hasActiveSubscription = false,
+  hasActiveSubscription = false, // <-- Usar a nova prop
   userEmail,
   className,
 }: SubscriptionPlanCardProps) {
@@ -91,8 +91,8 @@ export function SubscriptionPlanCard({
   };
 
   const handleCancelSubscriptionClick = () => {
-    // CORREÇÃO: Passar undefined como argumento
-    createStripePortalSessionAction.execute(undefined);
+    // CORREÇÃO: Chamar execute() sem argumentos
+    createStripePortalSessionAction.execute();
   };
 
   const R$ = new Intl.NumberFormat("pt-BR", {
@@ -138,7 +138,7 @@ export function SubscriptionPlanCard({
                 ? handleCancelSubscriptionClick
                 : handleSubscribeClick
             }
-            disabled={isProcessing || (!isCurrentPlan && hasActiveSubscription)}
+            disabled={isProcessing || (!isCurrentPlan && hasActiveSubscription)} // <-- Atualizar condição disabled
           >
             {isProcessing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
