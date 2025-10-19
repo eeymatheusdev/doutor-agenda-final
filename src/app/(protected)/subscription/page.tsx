@@ -53,6 +53,9 @@ const SubscriptionPage = async () => {
     redirect("/clinic");
   }
 
+  // Verifica se há um plano ativo na sessão
+  const hasActiveSubscription = !!session.user.plan;
+
   return (
     <PageContainer>
       <PageHeader>
@@ -70,6 +73,7 @@ const SubscriptionPage = async () => {
               key={plan.planType}
               {...plan}
               isCurrentPlan={session.user.plan === plan.planType}
+              hasActiveSubscription={hasActiveSubscription} // <-- Passar a prop
               userEmail={session.user.email}
             />
           ))}
