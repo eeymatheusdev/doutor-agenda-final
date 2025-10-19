@@ -14,9 +14,11 @@ export const createStripePortalSession = actionClient.action(async () => {
     headers: await headers(),
   })) as CustomSession | null; // Cast to CustomSession or null
 
-  // Verifica se o usuário está logado
-  if (!session?.user?.id) {
-    throw new Error("Usuário não autorizado.");
+  // Verifica se o usuário está logado e possui um stripeCustomerId
+  if (!session?.user?.id || !session.user.stripeCustomerId) {
+    throw new Error(
+      "Usuário não autorizado ou ID de cliente Stripe não encontrado.",
+    );
   }
 
   // Verifica se a chave secreta do Stripe está configurada
@@ -28,18 +30,11 @@ export const createStripePortalSession = actionClient.action(async () => {
     apiVersion: "2025-05-28.basil", // Use a versão da API do Stripe
   });
 
+  const customerId = session.user.stripeCustomerId;
+
   // Define a URL de retorno após o usuário interagir com o portal
   // Redireciona para a página de nova assinatura após o cancelamento
   const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/new-subscription`;
-
-  const customerId = session.user.stripeCustomerId; // ID do cliente Stripe
-
-  if (!customerId) {
-    // Adiciona uma verificação extra caso stripeCustomerId seja null/undefined na sessão
-    throw new Error(
-      "ID de cliente Stripe não encontrado na sessão do usuário.",
-    );
-  }
 
   // Cria a sessão do Portal de Faturamento
   const portalSession = await stripe.billingPortal.sessions.create({

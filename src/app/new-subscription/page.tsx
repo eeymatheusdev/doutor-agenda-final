@@ -60,7 +60,6 @@ export default async function NewSubscriptionPage() {
             key={plan.planType}
             {...plan}
             userEmail={session.user.email}
-            hasActiveSubscription={false} // <-- Adicionar prop como false
           />
         ))}
       </div>
