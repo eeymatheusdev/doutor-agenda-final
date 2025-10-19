@@ -3,13 +3,12 @@
 "use client";
 
 import { loadStripe } from "@stripe/stripe-js";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { toast } from "sonner";
 
 import { createStripeCheckout } from "@/actions/create-stripe-checkout";
-import { createStripePortalSession } from "@/actions/create-stripe-portal-session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,7 +45,6 @@ export function SubscriptionPlanCard({
   className,
 }: SubscriptionPlanCardProps) {
   const router = useRouter();
-
   const createStripeCheckoutAction = useAction(createStripeCheckout, {
     onSuccess: async ({ data }) => {
       if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -68,39 +66,24 @@ export function SubscriptionPlanCard({
     },
   });
 
-  const createStripePortalSessionAction = useAction(createStripePortalSession, {
-    onSuccess: ({ data }) => {
-      if (data?.portalUrl) {
-        router.push(data.portalUrl);
-      } else {
-        toast.error("Não foi possível obter a URL do portal. Tente novamente.");
-      }
-    },
-    onError: (error) => {
-      console.error("Stripe Portal Session Error:", error);
-      toast.error(
-        "Ocorreu um erro ao acessar o portal de gerenciamento. Tente novamente.",
-      );
-    },
-  });
-
   const handleSubscribeClick = () => {
     createStripeCheckoutAction.execute({ priceId, planType });
   };
 
-  const handleCancelSubscriptionClick = () => {
-    // CORREÇÃO: Chamar execute() sem argumentos
-    createStripePortalSessionAction.execute();
+  const handleManagePlanClick = () => {
+    if (process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL_URL) {
+      router.push(
+        `${process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL_URL}?prefilled_email=${userEmail}`,
+      );
+    } else {
+      toast.error("URL do portal do cliente não configurada.");
+    }
   };
 
   const R$ = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
-
-  const isProcessing =
-    createStripeCheckoutAction.isExecuting ||
-    createStripePortalSessionAction.isExecuting;
 
   return (
     <Card
@@ -130,18 +113,16 @@ export function SubscriptionPlanCard({
         <div className="mt-auto">
           <Button
             className="w-full"
-            variant={isCurrentPlan ? "destructive" : "default"}
+            variant={isCurrentPlan ? "outline" : "default"}
             onClick={
-              isCurrentPlan
-                ? handleCancelSubscriptionClick
-                : handleSubscribeClick
+              isCurrentPlan ? handleManagePlanClick : handleSubscribeClick
             }
-            disabled={isProcessing}
+            disabled={createStripeCheckoutAction.isExecuting}
           >
-            {isProcessing ? (
+            {createStripeCheckoutAction.isExecuting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : isCurrentPlan ? (
-              "Cancelar Assinatura"
+              "Gerenciar Assinatura"
             ) : (
               "Assinar Agora"
             )}

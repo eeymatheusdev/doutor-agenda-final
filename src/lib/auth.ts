@@ -1,4 +1,3 @@
-// src/lib/auth.ts
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { customSession } from "better-auth/plugins";
@@ -25,11 +24,6 @@ export const auth = betterAuth({
       const [userData, clinics] = await Promise.all([
         db.query.usersTable.findFirst({
           where: eq(usersTable.id, user.id),
-          columns: {
-            plan: true,
-            stripeCustomerId: true,
-            stripeSubscriptionId: true,
-          },
         }),
         db.query.usersToClinicsTable.findMany({
           where: eq(usersToClinicsTable.userId, user.id),
@@ -43,8 +37,6 @@ export const auth = betterAuth({
       return {
         user: {
           ...user,
-          stripeCustomerId: userData?.stripeCustomerId,
-          stripeSubscriptionId: userData?.stripeSubscriptionId,
           plan: userData?.plan,
           clinic: clinic?.clinicId
             ? {
@@ -91,11 +83,3 @@ export const auth = betterAuth({
     enabled: true,
   },
 });
-
-// Define the type for the custom session based on the modified auth object
-// CORREÇÃO: Usar 'type' em vez de 'export type' aqui, pois o tipo será usado internamente
-// e depois exportado de forma nomeada abaixo.
-type SessionDataType = Awaited<ReturnType<typeof auth.api.getSession>>;
-
-// CORREÇÃO: Exportar o tipo 'CustomSession' corretamente
-export type CustomSession = SessionDataType;
