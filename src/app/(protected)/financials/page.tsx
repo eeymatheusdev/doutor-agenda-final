@@ -21,21 +21,14 @@ import { auth } from "@/lib/auth";
 import FinancialDashboard from "./_components/financial-dashboard";
 import { FinancialsFilters } from "./_components/financials-filters";
 
-// Define the expected search param types
-interface FinancialsPageSearchParams {
-  from?: string;
-  to?: string;
-  status?: string; // Add other filters if needed
-  operation?: string;
-}
-
-interface FinancialsPageProps {
-  searchParams: FinancialsPageSearchParams; // Use the defined interface
-}
+// REMOVED ALL custom prop type interfaces
 
 export default async function FinancialsPage({
   searchParams,
-}: FinancialsPageProps) {
+}: {
+  // Let Next.js infer the type for searchParams, but expect it to be this shape
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) redirect("/authentication");
@@ -68,11 +61,24 @@ export default async function FinancialsPage({
   ].sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
 
   // Extract filter values from searchParams, providing defaults
+  // Add null checks for safety
+  const fromParam = searchParams?.from;
+  const toParam = searchParams?.to;
+  const statusParam = searchParams?.status;
+  const operationParam = searchParams?.operation;
+
+  // Ensure params are strings before using them
   const from =
-    searchParams.from ?? dayjs().startOf("month").format("YYYY-MM-DD");
-  const to = searchParams.to ?? dayjs().endOf("month").format("YYYY-MM-DD");
-  const status = searchParams.status;
-  const operation = searchParams.operation;
+    typeof fromParam === "string"
+      ? fromParam
+      : dayjs().startOf("month").format("YYYY-MM-DD");
+  const to =
+    typeof toParam === "string"
+      ? toParam
+      : dayjs().endOf("month").format("YYYY-MM-DD");
+  const status = typeof statusParam === "string" ? statusParam : undefined;
+  const operation =
+    typeof operationParam === "string" ? operationParam : undefined;
 
   return (
     <PageContainer>

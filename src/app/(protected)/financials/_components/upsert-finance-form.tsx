@@ -8,10 +8,10 @@ import { ptBR } from "date-fns/locale";
 import {
   CalendarIcon,
   Check,
-  DollarSign,
+  DollarSign, // Not used, can be removed if desired
   Info,
   Loader2,
-  Users,
+  Users, // Not used, can be removed if desired
 } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import React, { useEffect, useMemo, useState } from "react";
@@ -60,7 +60,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@/components/ui/separator"; // Not used, can be removed if desired
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -70,19 +70,26 @@ import {
 } from "@/components/ui/tooltip";
 import {
   clinicFinancesTable,
-  doctorsTable,
+  clinicFinancialTypeInputEnum, // Import enum
+  clinicFinancialTypeOutputEnum, // Import enum
+  clinicPaymentMethodsEnum, // Import enum for payment methods
+  doctorsTable, // Not used directly, but kept for type definition context
   employeesTable,
   patientsTable,
+  usersTable, // Not used directly, but kept for type definition context
 } from "@/db/schema";
 import { formatCurrencyInCents } from "@/helpers/currency";
 import { cn } from "@/lib/utils";
 
+// CORRECTED IMPORT PATH
 import {
   ClinicFinancialOperation, // Import types
   clinicFinancialOperations,
-  ClinicFinancialStatus,
+  ClinicFinancialStatus, // Import status type
   clinicFinancialStatuses,
-} from "../_constants"; // <-- Verify this path
+  clinicFinancialTypesInput, // Import input types constant
+  clinicFinancialTypesOutput, // Import output types constant
+} from "../index"; // <-- Corrected path
 
 type FinanceEntry = typeof clinicFinancesTable.$inferSelect & {
   patient?: { id: string; name: string } | null;
@@ -92,6 +99,7 @@ type FinanceEntry = typeof clinicFinancesTable.$inferSelect & {
 // Tipos simplificados para selects
 type SelectOption = { id: string; name: string };
 type PatientChargeOption = {
+  // Not used directly, kept for context
   id: number;
   description: string | null;
   amountInCents: number;
@@ -117,6 +125,14 @@ const centsToValue = (cents: number | undefined | null): number => {
   if (cents === null || cents === undefined) return 0;
   return cents / 100;
 };
+
+// Mapeamento dos métodos de pagamento para exibição
+const clinicPaymentMethods = clinicPaymentMethodsEnum.enumValues.map(
+  (value) => ({
+    value,
+    label: value, // Você pode mapear para labels mais amigáveis se quiser
+  }),
+);
 
 export default function UpsertFinanceForm({
   entry,

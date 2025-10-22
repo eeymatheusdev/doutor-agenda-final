@@ -6,8 +6,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import dayjs from "dayjs";
 import { CalendarIcon } from "lucide-react";
-import { parseAsIsoDate, useQueryState, useQueryStates } from "nuqs";
-import React, { useEffect, useState } from "react";
+import { parseAsIsoDate, useQueryState } from "nuqs"; // Removed useQueryStates as it's not used
+import React, { useEffect } from "react"; // Removed useState as form handles state
 import { DateRange } from "react-day-picker";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -39,12 +39,13 @@ import {
 } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
+// CORRECTED IMPORT PATH
 import {
   ClinicFinancialOperation, // Import types
   clinicFinancialOperations,
   ClinicFinancialStatus,
   clinicFinancialStatuses,
-} from "../_constants"; // <-- Verify this path
+} from "../index"; // <-- Corrected path
 
 // Schema for form (optional fields)
 const filterSchema = z.object({

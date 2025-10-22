@@ -14,12 +14,13 @@ import {
 import { formatCurrencyInCents } from "@/helpers/currency";
 import { cn } from "@/lib/utils"; // Importar cn
 
+// CORRECTED IMPORT PATH
 import {
   ClinicFinancialOperation, // Import types
   clinicFinancialOperations,
   ClinicFinancialStatus,
   clinicFinancialStatuses,
-} from "../_constants"; // <-- Verify this path
+} from "../index"; // <-- Corrected path
 import FinancialsTableActions from "./table-actions";
 
 // Tipo expandido para incluir relações
