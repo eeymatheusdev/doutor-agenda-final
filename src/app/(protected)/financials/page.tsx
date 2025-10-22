@@ -21,13 +21,11 @@ import { auth } from "@/lib/auth";
 import FinancialDashboard from "./_components/financial-dashboard";
 import { FinancialsFilters } from "./_components/financials-filters";
 
-// REMOVED ALL custom prop type interfaces
-
+// Remove the separate interface and type props directly
 export default async function FinancialsPage({
   searchParams,
 }: {
-  // Let Next.js infer the type for searchParams, but expect it to be this shape
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: { [key: string]: string | string[] | undefined }; // Type inline
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -48,7 +46,6 @@ export default async function FinancialsPage({
       columns: { id: true, name: true }, // Select only needed columns
     }),
     db.query.doctorsTable.findMany({
-      // Fetch doctors separately if they are not in employees table for payments
       where: eq(doctorsTable.clinicId, clinicId),
       columns: { id: true, name: true }, // Select only needed columns
     }),
@@ -57,11 +54,10 @@ export default async function FinancialsPage({
   // Combine employees and doctors for the payment select
   const employeesAndDoctors = [
     ...employees.map((e) => ({ id: e.id, name: e.name })),
-    ...doctors.map((d) => ({ id: d.id, name: `${d.name} (Médico)` })), // Add identifier for doctors if needed
-  ].sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+    ...doctors.map((d) => ({ id: d.id, name: `${d.name} (Médico)` })),
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
-  // Extract filter values from searchParams, providing defaults
-  // Add null checks for safety
+  // Extract filter values directly from searchParams
   const fromParam = searchParams?.from;
   const toParam = searchParams?.to;
   const statusParam = searchParams?.status;
@@ -89,10 +85,8 @@ export default async function FinancialsPage({
             Acompanhe as receitas, despesas e o balanço geral da sua clínica.
           </PageDescription>
         </PageHeaderContent>
-        {/* Actions can be added here if needed */}
       </PageHeader>
       <PageContent>
-        {/* Wrap Filters and Dashboard in Suspense for better UX */}
         <Suspense fallback={<Skeleton className="mb-4 h-16 w-full" />}>
           <FinancialsFilters />
         </Suspense>
@@ -106,7 +100,6 @@ export default async function FinancialsPage({
             </div>
           }
         >
-          {/* Pass filter params and fetched data to Dashboard */}
           <FinancialDashboard
             clinicId={clinicId}
             filterParams={{ from, to, status, operation }}
