@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 
 import {
   clinicFinancesTable,
-  employeesTable,
+  employeesTable, // Keep employeesTable
   patientsTable,
   usersTable,
 } from "@/db/schema"; // Importar tabelas relacionadas
@@ -16,17 +16,16 @@ import { cn } from "@/lib/utils"; // Importar cn
 
 // CORRECTED IMPORT PATH
 import {
-  ClinicFinancialOperation, // Import types
-  clinicFinancialOperations,
-  ClinicFinancialStatus,
+  clinicFinancialOperations, // Import types
+  ClinicFinancialStatus, // Keep unused type for consistency if desired
   clinicFinancialStatuses,
 } from "../index"; // <-- Corrected path
 import FinancialsTableActions from "./table-actions";
 
-// Tipo expandido para incluir relações
+// Tipo expandido para incluir relações CORRIGIDO
 type Transaction = typeof clinicFinancesTable.$inferSelect & {
   patient: Pick<typeof patientsTable.$inferSelect, "id" | "name"> | null;
-  employee: Pick<typeof employeesTable.$inferSelect, "id" | "name"> | null; // Inclui funcionário/médico
+  employee: Pick<typeof employeesTable.$inferSelect, "id" | "name"> | null; // Changed doctor to employee
   creator: Pick<typeof usersTable.$inferSelect, "id" | "name"> | null;
 };
 
@@ -157,6 +156,25 @@ export const columns: ColumnDef<Transaction>[] = [
   // },
   {
     id: "actions",
-    cell: ({ row }) => <FinancialsTableActions transaction={row.original} />,
+    // CORREÇÃO: Passar props corretas para FinancialsTableActions
+    cell: ({ row, table }) => {
+      // Acessar meta se disponível (assumindo que patients e employeesAndDoctors são passados via meta)
+      const meta = table.options.meta as
+        | {
+            patients: { id: string; name: string }[];
+            employeesAndDoctors: { id: string; name: string }[];
+          }
+        | undefined;
+      return (
+        <FinancialsTableActions
+          transaction={row.original}
+          patients={meta?.patients ?? []} // Usa dados do meta ou array vazio
+          employeesAndDoctors={meta?.employeesAndDoctors ?? []} // Usa dados do meta ou array vazio
+        />
+      );
+    },
   },
 ];
+
+// Exporta o tipo corrigido se necessário em outros lugares
+export type FinancialTransaction = Transaction;

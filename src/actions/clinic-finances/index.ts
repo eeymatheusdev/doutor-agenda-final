@@ -1,3 +1,4 @@
+// src/actions/clinic-finances/index.ts
 "use server"; // <-- Make sure this is the first line
 
 import dayjs from "dayjs";
@@ -207,7 +208,8 @@ export const getClinicTransactions = actionClient
       with: {
         patient: { columns: { id: true, name: true } },
         employee: { columns: { id: true, name: true } },
-        creator: { columns: { name: true } },
+        // CORREÇÃO: Incluir 'id' na seleção do creator
+        creator: { columns: { id: true, name: true } },
       },
       orderBy: (table, { desc }) => [
         desc(

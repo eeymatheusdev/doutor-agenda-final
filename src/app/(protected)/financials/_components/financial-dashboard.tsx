@@ -3,8 +3,10 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  DollarSign, // Kept for consistency, but not used in this file directly
+  Loader2, // Import Loader2 for button loading state
   Printer,
-  RefreshCw,
+  RefreshCw, // Kept for consistency, but not used in this file directly
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -80,7 +82,7 @@ export default function FinancialDashboard({
     useAction(markOverdueTransactions, {
       onSuccess: (data) => {
         toast.success(
-          `${data?.clinicUpdated ?? 0} lançamentos da clínica e ${data?.patientsUpdated ?? 0} cobranças de pacientes marcados como vencidos.`,
+          `${data?.data?.clinicUpdated ?? 0} lançamentos da clínica e ${data?.data?.patientsUpdated ?? 0} cobranças de pacientes marcados como vencidos.`,
         );
         // Invalidate relevant queries to refresh data
         queryClient.invalidateQueries({
@@ -97,8 +99,9 @@ export default function FinancialDashboard({
         // Consider invalidating patient finances if needed, though updatePatientFinancialStatus should handle it
       },
       onError: (error) => {
+        // CORREÇÃO: Acessar error.error.serverError
         toast.error(
-          error.serverError || "Erro ao marcar transações como vencidas.",
+          error.error.serverError || "Erro ao marcar transações como vencidas.",
         );
       },
     });
@@ -195,6 +198,7 @@ export default function FinancialDashboard({
             )}
             Marcar Vencidos
           </Button>
+          {/* Passa as props para AddFinanceEntryButton */}
           <AddFinanceEntryButton
             patients={patients}
             employeesAndDoctors={employeesAndDoctors}
@@ -207,8 +211,8 @@ export default function FinancialDashboard({
       ) : (
         <FinancialsTable
           data={transactions?.data ?? []}
-          patients={patients}
-          employeesAndDoctors={employeesAndDoctors}
+          patients={patients} // Passa patients para a tabela
+          employeesAndDoctors={employeesAndDoctors} // Passa employeesAndDoctors para a tabela
         />
       )}
     </div>

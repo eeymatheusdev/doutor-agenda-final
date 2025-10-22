@@ -1,3 +1,4 @@
+// src/app/(protected)/financials/_components/add-finance-entry-button.tsx
 "use client";
 
 import { Plus } from "lucide-react";
@@ -8,7 +9,17 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 
 import UpsertFinanceForm from "./upsert-finance-form";
 
-export default function AddFinanceEntryButton() {
+// Define a interface para as props do botão
+interface AddFinanceEntryButtonProps {
+  patients: { id: string; name: string }[];
+  employeesAndDoctors: { id: string; name: string }[];
+}
+
+// Recebe as props patients e employeesAndDoctors
+export default function AddFinanceEntryButton({
+  patients,
+  employeesAndDoctors,
+}: AddFinanceEntryButtonProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
@@ -19,7 +30,12 @@ export default function AddFinanceEntryButton() {
           Adicionar Transação
         </Button>
       </DialogTrigger>
-      <UpsertFinanceForm onSuccess={() => setIsOpen(false)} />
+      {/* Passa as props recebidas para o UpsertFinanceForm */}
+      <UpsertFinanceForm
+        onSuccess={() => setIsOpen(false)}
+        patients={patients}
+        employeesAndDoctors={employeesAndDoctors}
+      />
     </Dialog>
   );
 }
