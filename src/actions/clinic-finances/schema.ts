@@ -38,11 +38,8 @@ export const clinicFinanceSchema = z
     dueDate: z.date().optional().nullable(),
     status: z
       .enum(clinicFinancialStatusEnum.enumValues)
-      .refine((val) => val !== "overdue" && val !== "refunded", {
-        message: "Status inválido para seleção manual.",
-      })
       .optional()
-      .default("pending"), // Default to pending, refine manual selection
+      .default("pending"), // Default to pending, removed refine
     paymentMethod: z
       .enum(clinicPaymentMethodsEnum.enumValues)
       .optional()

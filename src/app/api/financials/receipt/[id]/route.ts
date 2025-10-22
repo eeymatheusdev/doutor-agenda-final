@@ -20,19 +20,25 @@ const paramsSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
-// Corrected function signature: params is NOT a Promise here
+// Define the expected context type for Route Handlers
+interface RouteContext {
+  params: Promise<{ id: string }>; // <-- Wrap params in a Promise
+}
+
+// Corrected function signature using RouteContext with Promise
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }, // <-- Removed Promise<> wrapper
+  { params: paramsPromise }: RouteContext, // <-- Rename to indicate it's a promise
 ) {
   try {
+    const params = await paramsPromise; // <-- Await the promise here
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user?.clinic?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const clinicId = session.user.clinic.id;
 
-    // Validate ID
+    // Validate ID directly from resolved params
     const validationResult = paramsSchema.safeParse(params);
     if (!validationResult.success) {
       return NextResponse.json(
@@ -73,7 +79,17 @@ export async function GET(
       );
     }
 
-    // Gerar HTML (keep as is)
+    // Determine the relevant date and format it using dayjs
+    const relevantDate =
+      transaction.paymentDate ?? transaction.dueDate ?? transaction.createdAt;
+    const formattedRelevantDate = relevantDate
+      ? dayjs(relevantDate).format("DD/MM/YYYY HH:mm")
+      : "-";
+    const formattedDueDate = transaction.dueDate
+      ? dayjs(transaction.dueDate).format("DD/MM/YYYY")
+      : "-";
+
+    // Gerar HTML (using dayjs for formatting)
     const htmlContent = `
       <html>
         <head><title>Recibo</title>
@@ -102,8 +118,8 @@ export async function GET(
 
           <table class="details">
             <tr><th width="30%">ID da Transação</th><td>${transaction.id}</td></tr>
-            <tr><th>Data ${transaction.status === "paid" && transaction.paymentDate ? "do Pagamento" : "do Lançamento"}</th><td>${format(new Date(transaction.paymentDate ?? transaction.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</td></tr>
-            ${transaction.dueDate ? `<tr><th>Data de Vencimento</th><td>${format(new Date(transaction.dueDate), "dd/MM/yyyy", { locale: ptBR })}</td></tr>` : ""}
+            <tr><th>Data ${transaction.status === "paid" && transaction.paymentDate ? "do Pagamento" : "do Lançamento"}</th><td>${formattedRelevantDate}</td></tr>
+            ${transaction.dueDate ? `<tr><th>Data de Vencimento</th><td>${formattedDueDate}</td></tr>` : ""}
             <tr><th>Operação</th><td>${transaction.operation === "input" ? "Entrada" : "Saída"}</td></tr>
             <tr><th>Tipo</th><td>${transaction.typeInput || transaction.typeOutput}</td></tr>
              ${transaction.patient ? `<tr><th>Paciente</th><td>${transaction.patient.name}</td></tr>` : ""}

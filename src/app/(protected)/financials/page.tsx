@@ -15,18 +15,38 @@ import {
 } from "@/components/ui/page-container";
 import { Skeleton } from "@/components/ui/skeleton"; // For Suspense fallback
 import { db } from "@/db";
-import { doctorsTable, employeesTable, patientsTable } from "@/db/schema"; // Import necessary tables
+import {
+  clinicFinancialOperationEnum, // Import enums for validation
+  clinicFinancialStatusEnum,
+  doctorsTable,
+  employeesTable,
+  patientsTable,
+} from "@/db/schema"; // Import necessary tables
 import { auth } from "@/lib/auth";
 
 import FinancialDashboard from "./_components/financial-dashboard";
 import { FinancialsFilters } from "./_components/financials-filters";
 
-// Remove the separate interface and type props directly
+// Define the expected structure inside the Promise
+interface FinancialsSearchParams {
+  from?: string;
+  to?: string;
+  status?: (typeof clinicFinancialStatusEnum.enumValues)[number];
+  operation?: (typeof clinicFinancialOperationEnum.enumValues)[number];
+}
+
+// Type searchParams as a Promise containing the expected structure
+interface FinancialsPageProps {
+  searchParams?: Promise<FinancialsSearchParams>;
+}
+
 export default async function FinancialsPage({
   searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined }; // Type inline
-}) {
+}: FinancialsPageProps) {
+  // Use the Promise type
+  // Await the searchParams promise
+  const resolvedSearchParams = await searchParams;
+
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) redirect("/authentication");
@@ -57,13 +77,13 @@ export default async function FinancialsPage({
     ...doctors.map((d) => ({ id: d.id, name: `${d.name} (Médico)` })),
   ].sort((a, b) => a.name.localeCompare(b.name));
 
-  // Extract filter values directly from searchParams
-  const fromParam = searchParams?.from;
-  const toParam = searchParams?.to;
-  const statusParam = searchParams?.status;
-  const operationParam = searchParams?.operation;
+  // Use the resolved searchParams object
+  const fromParam = resolvedSearchParams?.from;
+  const toParam = resolvedSearchParams?.to;
+  const statusParam = resolvedSearchParams?.status;
+  const operationParam = resolvedSearchParams?.operation;
 
-  // Ensure params are strings before using them
+  // Ensure params are strings before using them (logic remains the same)
   const from =
     typeof fromParam === "string"
       ? fromParam
@@ -88,6 +108,7 @@ export default async function FinancialsPage({
       </PageHeader>
       <PageContent>
         <Suspense fallback={<Skeleton className="mb-4 h-16 w-full" />}>
+          {/* Pass resolved params to filters if needed, or let filters handle URL state */}
           <FinancialsFilters />
         </Suspense>
         <Suspense
@@ -102,7 +123,7 @@ export default async function FinancialsPage({
         >
           <FinancialDashboard
             clinicId={clinicId}
-            filterParams={{ from, to, status, operation }}
+            filterParams={{ from, to, status, operation }} // Pass resolved params
             patients={patients}
             employeesAndDoctors={employeesAndDoctors}
           />
