@@ -1,6 +1,7 @@
 // src/app/api/financials/report/spent/route.ts
 import "dayjs/locale/pt-br";
 
+import { format } from "date-fns"; // Import format from date-fns
 import dayjs from "dayjs";
 import { and, desc, eq, gte, lte, SQL, sql } from "drizzle-orm";
 import { headers } from "next/headers";
@@ -8,13 +9,25 @@ import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 
 import { db } from "@/db";
-import { clinicFinancesTable, clinicFinancialStatusEnum } from "@/db/schema";
+// *** CORREÇÃO: Importar clinicsTable ***
+import {
+  clinicFinancesTable,
+  clinicFinancialStatusEnum,
+  clinicsTable,
+} from "@/db/schema";
+// *** FIM DA CORREÇÃO ***
 import { formatCurrencyInCents } from "@/helpers/currency";
 import { auth } from "@/lib/auth";
 
 dayjs.locale("pt-br");
 
+// Define the expected context type for Route Handlers
+interface RouteContext {
+  params: Promise<{ id: string }>; // Wrap params in a Promise
+}
+
 export async function GET(request: NextRequest) {
+  // Use NextRequest for searchParams
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user?.clinic?.id) {
@@ -22,7 +35,8 @@ export async function GET(request: NextRequest) {
     }
     const clinicId = session.user.clinic.id;
 
-    const { searchParams } = new URL(request.url);
+    // Use request.nextUrl.searchParams instead of new URL(request.url)
+    const searchParams = request.nextUrl.searchParams;
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const status = searchParams.get("status") as
@@ -31,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     // --- Fetch Clinic Info ---
     const clinicInfo = await db.query.clinicsTable.findFirst({
-      where: eq(clinicsTable.id, clinicId),
+      where: eq(clinicsTable.id, clinicId), // Now clinicsTable is defined
       columns: { name: true, cnpj: true },
     });
 

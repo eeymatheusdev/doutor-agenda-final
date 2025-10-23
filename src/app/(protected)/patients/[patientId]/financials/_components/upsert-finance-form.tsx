@@ -1,3 +1,4 @@
+// src/app/(protected)/patients/[patientId]/financials/_components/upsert-finance-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,10 +13,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { upsertFinance } from "@/actions/patient-finances";
-import {
-  UpsertFinanceSchema,
-  upsertFinanceSchema,
-} from "@/actions/patient-finances/schema";
+import { upsertFinanceSchema } from "@/actions/patient-finances/schema"; // Schema já omite patientId
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -58,6 +56,7 @@ interface UpsertFinanceFormProps {
   onSuccess?: () => void;
 }
 
+// O schema já omite patientId, então podemos usá-lo diretamente
 const formSchema = upsertFinanceSchema.omit({ patientId: true });
 type FormValues = z.infer<typeof formSchema>;
 
@@ -67,6 +66,13 @@ export default function UpsertFinanceForm({
   onSuccess,
 }: UpsertFinanceFormProps) {
   const queryClient = useQueryClient();
+
+  // *** CORREÇÃO APLICADA AQUI ***
+  // Mapeia 'overdue' para 'pending' no defaultValues
+  const initialStatus =
+    entry?.status === "overdue" ? "pending" : (entry?.status ?? "pending");
+  // *** FIM DA CORREÇÃO ***
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -76,7 +82,7 @@ export default function UpsertFinanceForm({
       description: entry?.description ?? "",
       method: entry?.method ?? "",
       dueDate: entry?.dueDate ? new Date(entry.dueDate) : undefined,
-      status: entry?.status ?? "pending",
+      status: initialStatus, // Usa o status inicial ajustado
     },
   });
 
@@ -211,6 +217,7 @@ export default function UpsertFinanceForm({
                       <SelectItem value="transferencia">
                         Transferência Bancária
                       </SelectItem>
+                      {/* Adicione outros métodos conforme necessário */}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -268,7 +275,8 @@ export default function UpsertFinanceForm({
                     <FormLabel>Status da Cobrança</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value ?? "pending"}
+                      // Garante que o valor passado seja 'pending' ou 'paid'
+                      value={field.value ?? "pending"}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -278,6 +286,7 @@ export default function UpsertFinanceForm({
                       <SelectContent>
                         <SelectItem value="pending">Pendente</SelectItem>
                         <SelectItem value="paid">Paga</SelectItem>
+                        {/* Não inclui 'overdue' como opção selecionável */}
                       </SelectContent>
                     </Select>
                     <FormMessage />
