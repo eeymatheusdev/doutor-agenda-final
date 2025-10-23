@@ -5,14 +5,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Check, Info, Loader2 } from "lucide-react"; // Ícones relevantes
+import { CalendarIcon, Check, Info, Loader2 } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import React, { useEffect, useState } from "react";
-// CORREÇÃO: Importar FieldValues para tipagem mais precisa
-import { FieldValues, useForm } from "react-hook-form";
+// Importar z para usar z.input
+import { useForm } from "react-hook-form";
 import { NumericFormat } from "react-number-format";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "zod"; // Importar z
 
 import { upsertClinicFinance } from "@/actions/clinic-finances";
 import {
@@ -77,13 +77,12 @@ import {
   clinicFinancialTypesOutput,
 } from "../index";
 
+// Tipos permanecem os mesmos
 type FinanceEntry = typeof clinicFinancesTable.$inferSelect & {
   patient?: { id: string; name: string } | null;
   employee?: { id: string; name: string } | null;
 };
-
 type SelectOption = { id: string; name: string };
-
 interface UpsertFinanceFormProps {
   entry?: FinanceEntry;
   onSuccess?: () => void;
@@ -108,10 +107,8 @@ const clinicPaymentMethods = clinicPaymentMethodsEnum.enumValues.map(
   }),
 );
 
-// Define o tipo explicitamente para defaultValues, garantindo que status seja do tipo correto
-type FormDefaultValues = Omit<ClinicFinanceSchema, "amount"> & {
-  amount: number;
-};
+// Define o tipo de entrada do schema Zod
+type ClinicFinanceInputSchema = z.input<typeof clinicFinanceSchema>;
 
 export default function UpsertFinanceForm({
   entry,
@@ -129,28 +126,30 @@ export default function UpsertFinanceForm({
       ? "pending"
       : (entry?.status ?? "pending");
 
-  // Define os valores padrão garantindo a conformidade com ClinicFinanceSchema (especialmente 'status')
-  const defaultValues: FormDefaultValues = {
+  // defaultValues pode usar o tipo de entrada também, mas precisa garantir que status tenha um valor
+  const defaultValues: Partial<ClinicFinanceInputSchema> = {
+    // Usar Partial para flexibilidade inicial
     id: entry?.id,
-    operation: entry?.operation ?? "input", // Fornecer um default válido se 'entry' não existir
-    typeInput: entry?.typeInput ?? undefined, // Manter undefined se não aplicável inicialmente
-    typeOutput: entry?.typeOutput ?? undefined, // Manter undefined se não aplicável inicialmente
+    operation: entry?.operation ?? "input",
+    typeInput: entry?.typeInput ?? undefined,
+    typeOutput: entry?.typeOutput ?? undefined,
     description: entry?.description ?? "",
     amount: centsToValue(entry?.amountInCents),
     paymentDate: entry?.paymentDate ? new Date(entry.paymentDate) : undefined,
     dueDate: entry?.dueDate ? new Date(entry.dueDate) : undefined,
-    status: initialStatus, // Garante que status sempre tem um valor válido
-    paymentMethod: entry?.paymentMethod ?? undefined, // Manter undefined se não aplicável inicialmente
+    status: initialStatus, // Garante que status está definido
+    paymentMethod: entry?.paymentMethod ?? undefined,
     observations: entry?.observations ?? "",
-    patientId: entry?.patientId ?? undefined, // Manter undefined se não aplicável inicialmente
-    employeeId: entry?.employeeId ?? undefined, // Manter undefined se não aplicável inicialmente
+    patientId: entry?.patientId ?? undefined,
+    employeeId: entry?.employeeId ?? undefined,
     linkedPatientChargeIds: entry?.linkedPatientChargeIds ?? [],
   };
 
-  const form = useForm<ClinicFinanceSchema>({
-    // Usar o tipo de saída do Zod
+  // *** ALTERAÇÃO PRINCIPAL AQUI ***
+  // Usar z.input<typeof clinicFinanceSchema> como tipo genérico para useForm
+  const form = useForm<ClinicFinanceInputSchema>({
+    // *** FIM DA ALTERAÇÃO ***
     resolver: zodResolver(clinicFinanceSchema),
-    // Fornecer defaultValues que satisfazem ClinicFinanceSchema
     defaultValues: defaultValues,
     mode: "onBlur",
   });
@@ -161,6 +160,7 @@ export default function UpsertFinanceForm({
   const watchedPatientId = form.watch("patientId");
   const watchedStatus = form.watch("status");
 
+  // ... restante do componente permanece igual ...
   // Busca as cobranças pendentes do paciente selecionado
   const { data: patientChargesData, isLoading: isLoadingPatientCharges } =
     useQuery({
@@ -170,8 +170,9 @@ export default function UpsertFinanceForm({
         const result = await getPatientFinances({
           patientId: watchedPatientId,
         });
-        return (result?.data || []).filter(
-          (charge) => charge.type === "charge" && charge.status !== "paid",
+        // Certifica que result.data existe e é um array antes de filtrar
+        return (result?.data ?? []).filter(
+          (charge: any) => charge.type === "charge" && charge.status !== "paid",
         );
       },
       enabled:
@@ -193,12 +194,11 @@ export default function UpsertFinanceForm({
     ) {
       const totalSelectedAmount = selectedPatientCharges.reduce(
         (sum, chargeId) => {
-          const charge = patientChargesData.find((c) => c.id === chargeId);
+          const charge = patientChargesData.find((c: any) => c.id === chargeId);
           return sum + (charge?.amountInCents || 0);
         },
         0,
       );
-      // Atualiza o campo de valor do formulário
       form.setValue("amount", centsToValue(totalSelectedAmount), {
         shouldValidate: true,
       });
@@ -208,10 +208,9 @@ export default function UpsertFinanceForm({
   }, [
     selectedPatientCharges,
     patientChargesData,
-    form.setValue,
     watchedOperation,
     watchedTypeInput,
-  ]); // Adicionado form.setValue
+  ]);
 
   const { execute, isExecuting } = useAction(upsertClinicFinance, {
     onSuccess: () => {
@@ -240,8 +239,10 @@ export default function UpsertFinanceForm({
     },
   });
 
-  function onSubmit(values: ClinicFinanceSchema) {
-    // Espera o tipo de saída
+  function onSubmit(values: ClinicFinanceInputSchema) {
+    // Agora espera o tipo de entrada
+    // O Zod resolver irá aplicar o default e validar,
+    // então podemos passar `values` diretamente (ou quase)
     const submitValues = {
       ...values,
       amount: Number(values.amount) || 0,
@@ -258,29 +259,31 @@ export default function UpsertFinanceForm({
         values.linkedPatientChargeIds &&
         values.linkedPatientChargeIds.length > 0
           ? values.linkedPatientChargeIds
-          : null, // Certificar que envia null se vazio
+          : null,
       typeInput: values.operation === "input" ? values.typeInput : undefined,
       typeOutput: values.operation === "output" ? values.typeOutput : undefined,
       paymentMethod: values.status === "paid" ? values.paymentMethod : null,
-      status: values.status, // Já deve ser válido
+      // Status: Se 'undefined' aqui (porque é opcional no Input), o Zod aplicará o default 'pending'
+      status: values.status ?? "pending", // Garante que nunca seja undefined ao submeter
     };
-    execute(submitValues);
+    execute(submitValues as ClinicFinanceSchema); // Faz cast para o tipo de saída esperado pela action
   }
 
   const handleChargeSelection = (chargeId: number) => {
     setSelectedPatientCharges((prevSelected) => {
-      if (prevSelected.includes(chargeId)) {
-        return prevSelected.filter((id) => id !== chargeId);
-      } else {
-        return [...prevSelected, chargeId];
-      }
+      const newSelected = prevSelected.includes(chargeId)
+        ? prevSelected.filter((id) => id !== chargeId)
+        : [...prevSelected, chargeId];
+      form.setValue("linkedPatientChargeIds", newSelected);
+      return newSelected;
     });
   };
 
   useEffect(() => {
     const resetConditionalFields = (
-      operation: ClinicFinancialOperation | undefined,
+      operation: ClinicFinanceInputSchema["operation"] | undefined,
     ) => {
+      // ... (lógica existente para resetar campos) ...
       if (operation === "input") {
         form.setValue("typeOutput", undefined);
         form.setValue("employeeId", null);
@@ -313,7 +316,7 @@ export default function UpsertFinanceForm({
     };
     resetConditionalFields(watchedOperation);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedOperation, form.setValue]); // watchedTypeInput/Output removidos para evitar loops indesejados
+  }, [watchedOperation]);
 
   useEffect(() => {
     if (watchedOperation === "input") {
@@ -322,13 +325,12 @@ export default function UpsertFinanceForm({
         watchedTypeInput !== "Recebimento Procedimento" &&
         watchedTypeInput !== "Recebimento Pacote" &&
         watchedTypeInput !== "Crédito/Adiantamento Paciente" &&
-        form.getValues("patientId") // Só limpa se não for um tipo relacionado a paciente
+        form.getValues("patientId")
       ) {
         form.setValue("patientId", null);
         form.setValue("linkedPatientChargeIds", []);
         setSelectedPatientCharges([]);
       } else if (watchedTypeInput === "Crédito/Adiantamento Paciente") {
-        // Se for crédito, limpa apenas os linked charges, mantém patientId
         form.setValue("linkedPatientChargeIds", []);
         setSelectedPatientCharges([]);
       }
@@ -337,12 +339,11 @@ export default function UpsertFinanceForm({
         watchedTypeOutput !== "Pagamento Funcionário" &&
         form.getValues("employeeId")
       ) {
-        // Só limpa se não for pagamento de funcionário
         form.setValue("employeeId", null);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedTypeInput, watchedTypeOutput, form.setValue, watchedOperation]); // Adicionado form.getValues
+  }, [watchedTypeInput, watchedTypeOutput, watchedOperation]);
 
   const availableStatuses = clinicFinancialStatuses.filter(
     (s) => s.value !== "overdue" && s.value !== "refunded",
@@ -372,8 +373,7 @@ export default function UpsertFinanceForm({
                 <FormLabel>Operação</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  // CORREÇÃO: Usar valor do field, default já tratado no useForm
-                  value={field.value}
+                  value={field.value} // Valor direto do field
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -403,7 +403,7 @@ export default function UpsertFinanceForm({
                   <FormLabel>Tipo de Entrada</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    value={field.value ?? ""}
+                    value={field.value ?? ""} // Lida com possível null/undefined
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -433,7 +433,7 @@ export default function UpsertFinanceForm({
                   <FormLabel>Tipo de Saída</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    value={field.value ?? ""}
+                    value={field.value ?? ""} // Lida com possível null/undefined
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -465,7 +465,7 @@ export default function UpsertFinanceForm({
                     <FormLabel>Funcionário / Médico</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value ?? ""}
+                      value={field.value ?? ""} // Lida com possível null/undefined
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -500,7 +500,7 @@ export default function UpsertFinanceForm({
                     <FormLabel>Paciente</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value ?? ""}
+                      value={field.value ?? ""} // Lida com possível null/undefined
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -546,7 +546,9 @@ export default function UpsertFinanceForm({
                 </FormLabel>
                 <ScrollArea className="h-32 w-full rounded-md border p-2">
                   {isLoadingPatientCharges && (
-                    <Loader2 className="mx-auto my-4 h-6 w-6 animate-spin" />
+                    <div className="flex h-full items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
                   )}
                   {!isLoadingPatientCharges &&
                     patientChargesData &&
@@ -559,7 +561,7 @@ export default function UpsertFinanceForm({
                     patientChargesData &&
                     patientChargesData.length > 0 && (
                       <div className="space-y-2">
-                        {patientChargesData.map((charge) => (
+                        {patientChargesData.map((charge: any) => (
                           <div
                             key={charge.id}
                             className="hover:bg-muted/50 flex items-center justify-between rounded-sm p-1"
@@ -603,7 +605,6 @@ export default function UpsertFinanceForm({
                       </div>
                     )}
                 </ScrollArea>
-                {/* Exibir mensagem de erro do Zod para linkedPatientChargeIds se houver */}
                 <FormField
                   control={form.control}
                   name="linkedPatientChargeIds"
@@ -623,7 +624,7 @@ export default function UpsertFinanceForm({
                   <Textarea
                     placeholder="Detalhes da transação..."
                     {...field}
-                    value={field.value ?? ""} // Garantir que não seja null
+                    value={field.value ?? ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -646,10 +647,14 @@ export default function UpsertFinanceForm({
                     prefix="R$ "
                     decimalScale={2}
                     fixedDecimalScale
-                    value={field.value}
-                    onValueChange={(values) =>
-                      field.onChange(values.floatValue ?? 0)
-                    }
+                    value={field.value === undefined ? "" : field.value}
+                    onValueChange={(values) => {
+                      field.onChange(
+                        values.floatValue === undefined
+                          ? undefined
+                          : values.floatValue,
+                      );
+                    }}
                     disabled={
                       watchedOperation === "input" &&
                       (watchedTypeInput === "Recebimento Consulta" ||
@@ -674,7 +679,7 @@ export default function UpsertFinanceForm({
           />
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Data Pagamento/Recebimento (Obrigatório se pago) */}
+            {/* Data Pagamento/Recebimento */}
             <FormField
               control={form.control}
               name="paymentDate"
@@ -715,7 +720,7 @@ export default function UpsertFinanceForm({
               )}
             />
 
-            {/* Data Vencimento (Opcional) */}
+            {/* Data Vencimento */}
             <FormField
               control={form.control}
               name="dueDate"
@@ -765,9 +770,11 @@ export default function UpsertFinanceForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    {" "}
-                    {/* Agora seguro */}
+                  <Select
+                    onValueChange={field.onChange}
+                    // Garante que o valor passado para Select seja sempre uma string válida do enum
+                    value={field.value ?? "pending"}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o status" />
@@ -779,11 +786,10 @@ export default function UpsertFinanceForm({
                           {s.label}
                         </SelectItem>
                       ))}
-                      {/* Mostrar status original se for Vencido ou Estornado */}
                       {entry?.status &&
                         (entry.status === "overdue" ||
                           entry.status === "refunded") &&
-                        entry.status === field.value && ( // Mostra apenas se for o valor atual
+                        entry.status === field.value && (
                           <SelectItem value={entry.status} disabled>
                             {entry.status === "overdue"
                               ? "Vencido"
@@ -797,7 +803,7 @@ export default function UpsertFinanceForm({
               )}
             />
 
-            {/* Forma de Pagamento (Condicional ao Status 'Pago') */}
+            {/* Forma de Pagamento */}
             {watchedStatus === "paid" && (
               <FormField
                 control={form.control}
@@ -807,7 +813,7 @@ export default function UpsertFinanceForm({
                     <FormLabel>Forma de Pagamento</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value ?? ""}
+                      value={field.value ?? ""} // Lida com null/undefined
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -840,7 +846,7 @@ export default function UpsertFinanceForm({
                   <Textarea
                     placeholder="Informações adicionais..."
                     {...field}
-                    value={field.value ?? ""}
+                    value={field.value ?? ""} // Garante string vazia
                   />
                 </FormControl>
                 <FormMessage />
