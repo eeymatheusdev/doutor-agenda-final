@@ -5,7 +5,6 @@ import {
   date,
   integer,
   jsonb,
-  numeric, // Kept for reference, replaced by integer for cents
   pgEnum,
   pgTable,
   primaryKey, // Added for usersToClinicsTable
@@ -15,6 +14,8 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+
+// --- ENUMS ---
 
 // --- NEW ENUMS for Clinic Finances ---
 export const clinicFinancialOperationEnum = pgEnum(
@@ -204,6 +205,13 @@ export const clinicPaymentMethodsEnum = pgEnum("clinic_payment_methods", [
 ]);
 
 export const patientSexEnum = pgEnum("patient_sex", ["male", "female"]);
+
+// NOVO ENUM para Status do Chamado
+export const supportTicketStatusEnum = pgEnum("support_ticket_status", [
+  "pending", // Pendente
+  "in_progress", // Em Andamento
+  "resolved", // Resolvido
+]);
 
 // --- TABLES ---
 
@@ -581,12 +589,33 @@ export const appointmentsTable = pgTable("appointments", {
     .$onUpdate(() => new Date()),
 });
 
+// NOVA TABELA para Chamados de Suporte
+export const supportTicketsTable = pgTable("support_tickets", {
+  id: serial("id").primaryKey(),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }), // Quem abriu
+  subject: text("subject").notNull(),
+  description: text("description").notNull(),
+  status: supportTicketStatusEnum("status").notNull().default("pending"),
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .$onUpdate(() => new Date()),
+});
+
 // --- RELATIONS ---
 
 export const usersTableRelations = relations(usersTable, ({ many }) => ({
   usersToClinics: many(usersToClinicsTable),
   anamneses: many(anamnesesTable),
   createdClinicFinances: many(clinicFinancesTable, { relationName: "creator" }),
+  supportTickets: many(supportTicketsTable), // Adicionado
 }));
 
 export const usersToClinicsTableRelations = relations(
@@ -613,6 +642,7 @@ export const clinicsTableRelations = relations(clinicsTable, ({ many }) => ({
   employees: many(employeesTable),
   anamneses: many(anamnesesTable),
   patientFinances: many(patientFinancesTable),
+  supportTickets: many(supportTicketsTable), // Adicionado
 }));
 
 export const clinicFinancesTableRelations = relations(
@@ -759,6 +789,22 @@ export const appointmentsTableRelations = relations(
     doctor: one(doctorsTable, {
       fields: [appointmentsTable.doctorId],
       references: [doctorsTable.id],
+    }),
+  }),
+);
+
+// NOVA RELAÇÃO para Chamados de Suporte
+export const supportTicketsTableRelations = relations(
+  supportTicketsTable,
+  ({ one }) => ({
+    clinic: one(clinicsTable, {
+      fields: [supportTicketsTable.clinicId],
+      references: [clinicsTable.id],
+    }),
+    user: one(usersTable, {
+      // Relação com o usuário que abriu
+      fields: [supportTicketsTable.userId],
+      references: [usersTable.id],
     }),
   }),
 );

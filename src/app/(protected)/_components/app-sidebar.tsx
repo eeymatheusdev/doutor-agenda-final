@@ -5,6 +5,7 @@ import {
   DollarSign,
   Gem,
   LayoutDashboard,
+  LifeBuoy, // NOVO ÍCONE
   LogOut,
   Settings,
   Stethoscope,
@@ -48,17 +49,24 @@ import {
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 
+// CORREÇÃO: Import path corrigido
 import UpsertClinicForm, {
   ClinicData,
-} from "../clinic/_components/upsert-clinic-form";
+} from "../clinic/_components/upsert-clinic-form"; // <-- CAMINHO CORRIGIDO
 
-const items = [
+const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Agendamentos", url: "/appointments", icon: CalendarDays },
   { title: "Médicos", url: "/doctors", icon: Stethoscope },
   { title: "Pacientes", url: "/patients", icon: UsersRound },
   { title: "Funcionários", url: "/employees", icon: Users },
   { title: "Financeiro", url: "/financials", icon: DollarSign },
+];
+
+const otherItems = [
+  { title: "Assinatura", url: "/subscription", icon: Gem },
+  // NOVO ITEM
+  { title: "Abertura de Chamados", url: "/support-tickets", icon: LifeBuoy },
 ];
 
 export function AppSidebar() {
@@ -113,16 +121,20 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={pathname === item.url}>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems.map(
+                (
+                  item, // Alterado para menuItems
+                ) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={pathname === item.url}>
+                      <Link href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ),
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -130,17 +142,20 @@ export function AppSidebar() {
           <SidebarGroupLabel>Outros</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/subscription"}
-                >
-                  <Link href="/subscription">
-                    <Gem />
-                    <span>Assinatura</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {otherItems.map(
+                (
+                  item, // Alterado para otherItems
+                ) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={pathname === item.url}>
+                      <Link href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ),
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
