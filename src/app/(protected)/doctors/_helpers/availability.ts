@@ -9,30 +9,42 @@ import { doctorsTable } from "@/db/schema";
 dayjs.extend(utc);
 dayjs.locale("pt-br");
 
-// Define um tipo que inclui apenas os campos de disponibilidade necessários
+// Define um tipo que inclui os campos de disponibilidade necessários
 type DoctorAvailabilityFields = Pick<
   typeof doctorsTable.$inferSelect,
-  | "availableFromTime"
-  | "availableToTime"
-  | "availableFromWeekDay"
-  | "availableToWeekDay"
+  "availableFromTime" | "availableToTime" | "availableWeekDays" // Alterado de availableFromWeekDay e availableToWeekDay
 >;
 
-// O tipo de entrada agora é mais permissivo e compatível com a interface 'Doctor'
-export const getAvailability = (doctor: DoctorAvailabilityFields) => {
-  const from = dayjs()
+// Mapeamento de número para nome do dia
+const weekDayNames = [
+  "Domingo",
+  "Segunda",
+  "Terça",
+  "Quarta",
+  "Quinta",
+  "Sexta",
+  "Sábado",
+];
+
+// Retorna os horários e a lista de dias formatada
+export const getAvailabilityInfo = (doctor: DoctorAvailabilityFields) => {
+  const fromTime = dayjs()
     .utc()
-    .day(doctor.availableFromWeekDay)
     .set("hour", Number(doctor.availableFromTime.split(":")[0]))
     .set("minute", Number(doctor.availableFromTime.split(":")[1]))
     .set("second", Number(doctor.availableFromTime.split(":")[2] || 0))
     .local();
-  const to = dayjs()
+  const toTime = dayjs()
     .utc()
-    .day(doctor.availableToWeekDay)
     .set("hour", Number(doctor.availableToTime.split(":")[0]))
     .set("minute", Number(doctor.availableToTime.split(":")[1]))
     .set("second", Number(doctor.availableToTime.split(":")[2] || 0))
     .local();
-  return { from, to };
+
+  // Mapeia os números dos dias para nomes e ordena
+  const availableDays = doctor.availableWeekDays
+    .sort((a, b) => a - b) // Ordena os números (0-6)
+    .map((dayIndex) => weekDayNames[dayIndex]); // Mapeia para nomes
+
+  return { fromTime, toTime, availableDays };
 };

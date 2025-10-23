@@ -466,7 +466,7 @@ export const patientFinancesTable = pgTable("patient_finances", {
     .$onUpdate(() => new Date()),
 });
 
-// --- Other tables remain mostly the same, just ensure timestamps are correct ---
+// --- doctorsTable UPDATED ---
 export const doctorsTable = pgTable("doctors", {
   id: uuid("id").defaultRandom().primaryKey(),
   clinicId: uuid("clinic_id")
@@ -484,8 +484,9 @@ export const doctorsTable = pgTable("doctors", {
   specialties: dentalSpecialtyEnum("specialties").array().notNull(),
   observations: text("observations"),
   education: text("education"),
-  availableFromWeekDay: integer("available_from_week_day").notNull(),
-  availableToWeekDay: integer("available_to_week_day").notNull(),
+  // availableFromWeekDay: integer("available_from_week_day").notNull(), // REMOVIDO
+  // availableToWeekDay: integer("available_to_week_day").notNull(), // REMOVIDO
+  availableWeekDays: integer("available_week_days").array().notNull(), // ADICIONADO (array of 0-6)
   availableFromTime: time("available_from_time").notNull(),
   availableToTime: time("available_to_time").notNull(),
   addressStreet: text("address_street").notNull(),

@@ -40,24 +40,38 @@ export const getAvailableTimes = actionClient
     if (!doctor) {
       throw new Error("Médico não encontrado");
     }
-    const selectedDayOfWeek = dayjs(parsedInput.date).day();
+    const selectedDayOfWeek = dayjs(parsedInput.date).day(); // 0 (Sun) to 6 (Sat)
+
+    // CORREÇÃO: Verifica se o dia da semana está no array 'availableWeekDays'
     const doctorIsAvailable =
-      selectedDayOfWeek >= doctor.availableFromWeekDay &&
-      selectedDayOfWeek <= doctor.availableToWeekDay;
+      doctor.availableWeekDays.includes(selectedDayOfWeek);
+
     if (!doctorIsAvailable) {
-      return [];
+      return []; // Retorna array vazio se o médico não atende nesse dia da semana
     }
 
-    // CORREÇÃO: Filtra o agendamento atual da verificação de horários
+    // Filtra o agendamento atual da verificação de horários
     const appointments = await db.query.appointmentsTable.findMany({
       where: and(
         eq(appointmentsTable.doctorId, parsedInput.doctorId),
+        eq(appointmentsTable.clinicId, session.user.clinic.id), // Garante que busca apenas na clínica do usuário
+        // Se estiver editando um agendamento, exclui ele da verificação
         parsedInput.appointmentId
           ? ne(appointmentsTable.id, parsedInput.appointmentId)
           : undefined,
       ),
+      // Adiciona filtro de data para otimizar a query no banco
+      // Busca agendamentos apenas para a data selecionada
+      // É importante converter a data para o início e fim do dia para garantir a comparação correta
+      // com o timestamp `appointmentDateTime`
+      // Esta otimização assume que `appointmentDateTime` está armazenado em UTC ou similar
+      // Se estiver em timezone local, pode precisar de ajuste com `dayjs-timezone`
+      // Exemplo simples (pode precisar de ajuste dependendo do fuso horário do DB):
+      // gte(appointmentsTable.appointmentDateTime, dayjs(parsedInput.date).startOf('day').toDate()),
+      // lte(appointmentsTable.appointmentDateTime, dayjs(parsedInput.date).endOf('day').toDate())
     });
 
+    // Filtra os agendamentos *após* a busca no banco, garantindo a lógica correta de dia
     const appointmentsOnSelectedDate = appointments
       .filter((appointment) => {
         return dayjs(appointment.appointmentDateTime).isSame(
@@ -68,8 +82,10 @@ export const getAvailableTimes = actionClient
       .map((appointment) =>
         dayjs(appointment.appointmentDateTime).format("HH:mm:ss"),
       );
+
     const timeSlots = generateTimeSlots();
 
+    // Lógica para comparar horários permanece a mesma
     const doctorAvailableFrom = dayjs()
       .utc()
       .set("hour", Number(doctor.availableFromTime.split(":")[0]))
@@ -82,6 +98,7 @@ export const getAvailableTimes = actionClient
       .set("minute", Number(doctor.availableToTime.split(":")[1]))
       .set("second", 0)
       .local();
+
     const doctorTimeSlots = timeSlots.filter((time) => {
       const date = dayjs()
         .utc()

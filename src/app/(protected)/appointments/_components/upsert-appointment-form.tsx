@@ -82,7 +82,7 @@ const finalizeAppointmentSchema = baseSchema.pick({
 interface UpsertAppointmentFormProps {
   isOpen: boolean;
   patients: (typeof patientsTable.$inferSelect)[];
-  doctors: (typeof doctorsTable.$inferSelect)[];
+  doctors: (typeof doctorsTable.$inferSelect)[]; // Tipo completo do médico
   onSuccess?: () => void;
   appointment?: AppointmentWithRelations;
   type?: "edit" | "finalize";
@@ -231,18 +231,19 @@ const UpsertAppointmentForm = ({
     }
   };
 
+  // *** CORREÇÃO APLICADA AQUI ***
   const isDateAvailable = (date: Date) => {
     if (!selectedDoctorId) return false;
     const selectedDoctor = doctors.find(
       (doctor) => doctor.id === selectedDoctorId,
     );
     if (!selectedDoctor) return false;
-    const dayOfWeek = date.getDay();
-    return (
-      dayOfWeek >= selectedDoctor.availableFromWeekDay &&
-      dayOfWeek <= selectedDoctor.availableToWeekDay
-    );
+    const dayOfWeek = date.getDay(); // 0 (Domingo) a 6 (Sábado)
+
+    // Verifica se o dia da semana está incluído no array availableWeekDays do médico
+    return selectedDoctor.availableWeekDays.includes(dayOfWeek);
   };
+  // *** FIM DA CORREÇÃO ***
 
   const isLoading =
     createAppointmentAction.isPending || updateAppointmentAction.isPending;
@@ -409,9 +410,10 @@ const UpsertAppointmentForm = ({
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < dayjs().startOf("day").toDate() ||
-                          !isDateAvailable(date)
+                        disabled={
+                          (date) =>
+                            date < dayjs().startOf("day").toDate() ||
+                            !isDateAvailable(date) // Usa a função corrigida
                         }
                         initialFocus
                         locale={ptBR} // Adicionado locale ptBR

@@ -5,8 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc"; // Importe o plugin UTC se for usar UTC
-import { CalendarIcon, XIcon } from "lucide-react";
-import { Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, XIcon } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -16,8 +15,13 @@ import { z } from "zod";
 
 // Não precisa do plugin UTC para esta correção específica
 import { upsertDoctor } from "@/actions/upsert-doctor";
+import {
+  UpsertDoctorSchema,
+  upsertDoctorSchema,
+} from "@/actions/upsert-doctor/schema"; // Importa o schema atualizado
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox"; // Importa Checkbox
 import {
   DialogContent,
   DialogDescription,
@@ -28,6 +32,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -60,141 +65,83 @@ import {
 } from "../_constants";
 
 dayjs.extend(utc);
-// Array de todas as chaves de estado para o Zod enum
-const allBrazilianStates = Object.keys(BrazilianState) as [
-  keyof typeof BrazilianState,
-  ...(keyof typeof BrazilianState)[],
-];
 
-// Array de todos os valores de especialidades para o Zod array de enums
-const allDentalSpecialties = Object.values(DentalSpecialty) as [
-  DentalSpecialty,
-  ...DentalSpecialty[],
-];
-
-const formSchema = z
-  .object({
-    avatarImageUrl: z
-      .string()
-      .url("URL inválida.")
-      .or(z.literal(""))
-      .optional()
-      .nullable(),
-    name: z.string().trim().min(1, {
-      message: "Nome é obrigatório.",
-    }),
-    cro: z.string().trim().min(1, {
-      message: "CRO é obrigatório.",
-    }),
-    rg: z.string().trim().min(1, {
-      message: "RG é obrigatório.",
-    }),
-    cpf: z.string().trim().min(1, {
-      message: "CPF é obrigatório.",
-    }),
-    dateOfBirth: z.date({
-      required_error: "Data de nascimento é obrigatória.",
-    }),
-    email: z.string().email({
-      message: "E-mail inválido.",
-    }),
-    phone: z
-      .string()
-      .regex(/^\d{10}$/, "Telefone inválido")
-      .optional()
-      .nullable(),
-    whatsApp: z
-      .string()
-      .regex(/^\d{11}$/, "WhatsApp inválido")
-      .optional()
-      .nullable(),
-    specialties: z.array(z.enum(allDentalSpecialties)).min(1, {
-      message: "Selecione pelo menos uma especialidade.",
-    }),
-    observations: z.string().optional().nullable(),
-    education: z.string().optional().nullable(),
-    availableFromWeekDay: z.string(),
-    availableToWeekDay: z.string(),
-    availableFromTime: z.string().min(1, {
-      message: "Hora de início é obrigatória.",
-    }),
-    availableToTime: z.string().min(1, {
-      message: "Hora de término é obrigatória.",
-    }),
-    addressStreet: z.string().trim().min(1, "Rua/Avenida é obrigatória."),
-    addressNumber: z.string().trim().min(1, "Número é obrigatório."),
-    addressComplement: z.string().optional().nullable(),
-    addressNeighborhood: z.string().trim().min(1, "Bairro é obrigatório."),
-    addressCity: z.string().trim().min(1, "Cidade é obrigatória."),
-    addressState: z.enum(allBrazilianStates, {
-      required_error: "Estado é obrigatório.",
-    }),
-    addressZipcode: z.string().regex(/^\d{8}$/, "CEP inválido"),
-  })
-  .refine(
-    (data) => {
-      return data.availableFromTime < data.availableToTime;
-    },
-    {
-      message:
-        "O horário de início não pode ser anterior ao horário de término.",
-      path: ["availableToTime"],
-    },
-  );
-
-interface DoctorWithArraySpecialties
+// Interface para o tipo de médico com 'availableWeekDays' como array de números
+interface DoctorWithAvailabilityArray
   extends Omit<
     typeof doctorsTable.$inferSelect,
-    "specialties" | "dateOfBirth"
+    "specialties" | "dateOfBirth" | "availableWeekDays"
   > {
   specialties: DentalSpecialty[] | null;
   dateOfBirth: string | null;
+  availableWeekDays: number[]; // Alterado para array de números
 }
 
 interface UpsertDoctorFormProps {
   isOpen: boolean;
-  doctor?: DoctorWithArraySpecialties;
+  doctor?: DoctorWithAvailabilityArray; // Usa o novo tipo
   onSuccess?: () => void;
 }
 
-const parseDate = (dateString: string | null | undefined) => {
-  if (!dateString) return undefined;
+// Extract the specific enum type for availableWeekDays from the schema
+type WeekDayEnumValue = z.infer<
+  typeof upsertDoctorSchema
+>["availableWeekDays"][number];
 
-  // Cria um objeto Date a partir da string de data recebida.
+const parseDate = (dateString: string | null | undefined): Date | undefined => {
+  // Return type can be undefined
+  if (!dateString) return undefined; // Return undefined if no string
   const date = new Date(dateString);
-
-  // getTimezoneOffset() retorna a diferença em minutos entre o UTC e a hora local.
-  // Para o Brasil (GMT-3), o valor é 180.
+  // Check if the date is valid before adjusting timezone
+  if (isNaN(date.getTime())) return undefined; // Return undefined for invalid date strings
   const timezoneOffset = date.getTimezoneOffset();
-
-  // Adicionamos os minutos do offset de volta à data.
-  // Isso efetivamente converte a data de volta para o horário UTC,
-  // corrigindo o deslocamento de um dia.
   date.setMinutes(date.getMinutes() + timezoneOffset);
-
   return date;
 };
+
+// Mapeamento de dias da semana para o formulário
+const weekDaysOptions = [
+  { value: "0", label: "Domingo" },
+  { value: "1", label: "Segunda" },
+  { value: "2", label: "Terça" },
+  { value: "3", label: "Quarta" },
+  { value: "4", label: "Quinta" },
+  { value: "5", label: "Sexta" },
+  { value: "6", label: "Sábado" },
+];
 
 const UpsertDoctorForm = ({
   doctor,
   onSuccess,
   isOpen,
 }: UpsertDoctorFormProps) => {
-  const defaultValues = {
+  const initialDateOfBirth = parseDate(doctor?.dateOfBirth) ?? new Date();
+
+  // *** CORREÇÃO APLICADA AQUI ***
+  // Cast the result of map(String) and the default array to the specific enum type
+  const initialAvailableWeekDays = (doctor?.availableWeekDays?.map(String) ?? [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+  ]) as WeekDayEnumValue[];
+  // *** FIM DA CORREÇÃO ***
+
+  const defaultValues: UpsertDoctorSchema = {
     avatarImageUrl: doctor?.avatarImageUrl ?? "",
     name: doctor?.name ?? "",
     cro: doctor?.cro ?? "",
     rg: doctor?.rg ?? "",
     cpf: doctor?.cpf ?? "",
-    dateOfBirth: parseDate(doctor?.dateOfBirth),
+    dateOfBirth: initialDateOfBirth, // Use the corrected initial value
     email: doctor?.email ?? "",
     phone: doctor?.phone ?? "",
     whatsApp: doctor?.whatsApp ?? "",
     specialties: (doctor?.specialties as any) ?? [],
     observations: doctor?.observations ?? "",
     education: doctor?.education ?? "",
-    availableFromWeekDay: doctor?.availableFromWeekDay?.toString() ?? "1",
-    availableToWeekDay: doctor?.availableToWeekDay?.toString() ?? "5",
+    availableWeekDays: initialAvailableWeekDays, // Use the corrected initial value
     availableFromTime: doctor?.availableFromTime ?? "",
     availableToTime: doctor?.availableToTime ?? "",
     addressStreet: doctor?.addressStreet ?? "",
@@ -206,16 +153,36 @@ const UpsertDoctorForm = ({
     addressZipcode: doctor?.addressZipcode ?? "",
   };
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<UpsertDoctorSchema>({
+    // Usa o tipo UpsertDoctorSchema
     shouldUnregister: true,
-    resolver: zodResolver(formSchema),
-    defaultValues: defaultValues as any,
+    resolver: zodResolver(upsertDoctorSchema), // Usa o schema atualizado
+    // defaultValues needs to strictly match the expected type Date, not Date | undefined
+    defaultValues: {
+      ...defaultValues,
+      dateOfBirth: defaultValues.dateOfBirth, // Ensure it's Date
+      availableWeekDays: defaultValues.availableWeekDays, // Ensure correct type
+    },
   });
 
   useEffect(() => {
+    // Reset form with potentially undefined date initially, Zod validates on submit
     if (isOpen) {
-      form.reset(defaultValues as any);
+      form.reset({
+        ...defaultValues,
+        // Allow undefined here for reset, handle required validation in Zod
+        dateOfBirth: parseDate(doctor?.dateOfBirth),
+        // Cast here as well for the reset
+        availableWeekDays: (doctor?.availableWeekDays?.map(String) ?? [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+        ]) as WeekDayEnumValue[],
+      });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, form, doctor]);
 
   const upsertDoctorAction = useAction(upsertDoctor, {
@@ -228,7 +195,8 @@ const UpsertDoctorForm = ({
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: UpsertDoctorSchema) => {
+    // Usa o tipo UpsertDoctorSchema
     const nullableString = (value: string | null | undefined) =>
       value === "" ? null : value;
 
@@ -241,6 +209,7 @@ const UpsertDoctorForm = ({
       observations: nullableString(values.observations),
       education: nullableString(values.education),
       addressComplement: nullableString(values.addressComplement),
+      // availableWeekDays já está no formato correto (array de strings) vindo do form
     });
   };
 
@@ -248,7 +217,6 @@ const UpsertDoctorForm = ({
 
   const handleSpecialtyChange = (value: string) => {
     const specialties = form.getValues("specialties");
-
     if (specialties.includes(value as DentalSpecialty)) {
       form.setValue(
         "specialties",
@@ -277,8 +245,10 @@ const UpsertDoctorForm = ({
           onSubmit={form.handleSubmit(onSubmit)}
           className="max-h-[70vh] space-y-6 overflow-y-auto px-1 pr-4"
         >
+          {/* Informações Pessoais (mantém igual) */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Informações Pessoais</h3>
+            {/* Campos Name, Email, CRO, CPF, RG, DateOfBirth, WhatsApp, Phone */}
             <FormField
               control={form.control}
               name="name"
@@ -404,6 +374,8 @@ const UpsertDoctorForm = ({
                           initialFocus
                           locale={ptBR}
                           captionLayout="dropdown"
+                          fromYear={1930} // Adjust start year if needed
+                          toYear={new Date().getFullYear()} // Set current year as end year
                         />
                       </PopoverContent>
                     </Popover>
@@ -459,8 +431,10 @@ const UpsertDoctorForm = ({
           </div>
 
           <Separator />
+          {/* Endereço (mantém igual) */}
           <div className="space-y-4">
             <h3 className="font-semibold">Endereço</h3>
+            {/* Campos Street, Number, Neighborhood, Complement, City, State, Zipcode */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
@@ -588,14 +562,17 @@ const UpsertDoctorForm = ({
             <h3 className="text-lg font-semibold">
               Especialidades e Disponibilidade
             </h3>
+            {/* Especialidades (mantém igual) */}
             <FormField
               control={form.control}
               name="specialties"
-              render={({ field }) => (
+              render={() => (
+                // Removido 'field' pois usamos watch e setValue
                 <FormItem>
                   <FormLabel>Especialidades</FormLabel>
                   <Select
-                    onValueChange={handleSpecialtyChange}
+                    onValueChange={handleSpecialtyChange} // Ação ao clicar em um item
+                    // O valor exibido no trigger não importa tanto aqui
                     value={
                       selectedSpecialties.length > 0
                         ? selectedSpecialties[0]
@@ -620,7 +597,7 @@ const UpsertDoctorForm = ({
                               : "unchecked"
                           }
                           onSelect={(e) => {
-                            e.preventDefault();
+                            e.preventDefault(); // Previne o fechamento ao clicar
                             handleSpecialtyChange(specialty.value);
                           }}
                         >
@@ -629,6 +606,7 @@ const UpsertDoctorForm = ({
                       ))}
                     </SelectContent>
                   </Select>
+                  {/* Exibe as especialidades selecionadas como botões */}
                   {selectedSpecialties.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-2">
                       {selectedSpecialties.map((specialty) => (
@@ -650,66 +628,70 @@ const UpsertDoctorForm = ({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="availableFromWeekDay"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Disponível de</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione um dia" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="0">Domingo</SelectItem>
-                        <SelectItem value="1">Segunda</SelectItem>
-                        <SelectItem value="2">Terça</SelectItem>
-                        <SelectItem value="3">Quarta</SelectItem>
-                        <SelectItem value="4">Quinta</SelectItem>
-                        <SelectItem value="5">Sexta</SelectItem>
-                        <SelectItem value="6">Sábado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="availableToWeekDay"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Até</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione um dia" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="0">Domingo</SelectItem>
-                        <SelectItem value="1">Segunda</SelectItem>
-                        <SelectItem value="2">Terça</SelectItem>
-                        <SelectItem value="3">Quarta</SelectItem>
-                        <SelectItem value="4">Quinta</SelectItem>
-                        <SelectItem value="5">Sexta</SelectItem>
-                        <SelectItem value="6">Sábado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+
+            {/* Dias da Semana (Alterado para Checkboxes) */}
+            <FormField
+              control={form.control}
+              name="availableWeekDays"
+              render={() => (
+                <FormItem>
+                  <div className="mb-4">
+                    <FormLabel className="text-base">
+                      Dias de Atendimento
+                    </FormLabel>
+                    <FormDescription>
+                      Selecione os dias da semana em que o médico atende.
+                    </FormDescription>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
+                    {weekDaysOptions.map((item) => (
+                      <FormField
+                        key={item.value}
+                        control={form.control}
+                        name="availableWeekDays"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={item.value}
+                              className="flex flex-row items-center space-y-0 space-x-2"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(
+                                    item.value as WeekDayEnumValue,
+                                  )} // Cast for type safety
+                                  onCheckedChange={(checked) => {
+                                    const currentValues = field.value ?? [];
+                                    const itemValue =
+                                      item.value as WeekDayEnumValue; // Cast for type safety
+                                    return checked
+                                      ? field.onChange([
+                                          ...currentValues,
+                                          itemValue,
+                                        ])
+                                      : field.onChange(
+                                          currentValues?.filter(
+                                            (value) => value !== itemValue,
+                                          ),
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {item.label}
+                              </FormLabel>
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Horários (mantém igual) */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -843,8 +825,10 @@ const UpsertDoctorForm = ({
           </div>
 
           <Separator />
+          {/* Informações Adicionais (mantém igual) */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Informações Adicionais</h3>
+            {/* Campos Education, Observations, AvatarImageUrl */}
             <FormField
               control={form.control}
               name="education"
@@ -862,7 +846,6 @@ const UpsertDoctorForm = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="observations"

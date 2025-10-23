@@ -17,6 +17,9 @@ const allDentalSpecialties = Object.values(DentalSpecialty) as [
   ...DentalSpecialty[],
 ];
 
+// Enum para os dias da semana (valor como string para o form)
+const weekDaysEnum = z.enum(["0", "1", "2", "3", "4", "5", "6"]);
+
 export const upsertDoctorSchema = z
   .object({
     id: z.string().uuid().optional(),
@@ -59,8 +62,12 @@ export const upsertDoctorSchema = z
     }),
     observations: z.string().optional().nullable(),
     education: z.string().optional().nullable(),
-    availableFromWeekDay: z.string(),
-    availableToWeekDay: z.string(),
+    // availableFromWeekDay: z.string(), // REMOVIDO
+    // availableToWeekDay: z.string(), // REMOVIDO
+    availableWeekDays: z.array(weekDaysEnum).min(1, {
+      // ADICIONADO
+      message: "Selecione pelo menos um dia da semana.",
+    }),
     availableFromTime: z.string().min(1, {
       message: "Hora de início é obrigatória.",
     }),
@@ -79,11 +86,30 @@ export const upsertDoctorSchema = z
   })
   .refine(
     (data) => {
-      return data.availableFromTime < data.availableToTime;
+      // Garante que availableFromTime e availableToTime sejam válidos antes de comparar
+      const [fromHour, fromMinute] = (data.availableFromTime || "00:00:00")
+        .split(":")
+        .map(Number);
+      const [toHour, toMinute] = (data.availableToTime || "00:00:00")
+        .split(":")
+        .map(Number);
+
+      if (
+        isNaN(fromHour) ||
+        isNaN(fromMinute) ||
+        isNaN(toHour) ||
+        isNaN(toMinute)
+      ) {
+        return false; // Horário inválido
+      }
+
+      const fromTotalMinutes = fromHour * 60 + fromMinute;
+      const toTotalMinutes = toHour * 60 + toMinute;
+
+      return fromTotalMinutes < toTotalMinutes;
     },
     {
-      message:
-        "O horário de início não pode ser anterior ao horário de término.",
+      message: "O horário de início deve ser anterior ao horário de término.",
       path: ["availableToTime"],
     },
   );

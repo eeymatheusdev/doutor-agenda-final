@@ -42,16 +42,18 @@ import { Separator } from "@/components/ui/separator";
 import { doctorsTable } from "@/db/schema";
 
 import { DentalSpecialty } from "../_constants";
-import { getAvailability } from "../_helpers/availability";
+import { getAvailabilityInfo } from "../_helpers/availability"; // Importa a função atualizada
 import UpsertDoctorForm from "./upsert-doctor-form";
 
+// Interface atualizada para usar availableWeekDays como number[]
 export interface Doctor
   extends Omit<
     typeof doctorsTable.$inferSelect,
-    "specialties" | "dateOfBirth"
+    "specialties" | "dateOfBirth" | "availableWeekDays"
   > {
   specialties: DentalSpecialty[];
   dateOfBirth: Date;
+  availableWeekDays: number[]; // Alterado para array de números
 }
 
 interface DoctorCardProps {
@@ -61,7 +63,6 @@ interface DoctorCardProps {
 const DoctorCard = ({ doctor }: DoctorCardProps) => {
   const [isUpsertDoctorDialogOpen, setIsUpsertDoctorDialogOpen] =
     useState(false);
-  // Novo estado para o dialog de pagamentos
   const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
   const deleteDoctorAction = useAction(deleteDoctor, {
     onSuccess: () => {
@@ -80,16 +81,20 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
     .split(" ")
     .map((name) => name[0])
     .join("");
-  const availability = getAvailability(doctor);
+
+  // Usa a função atualizada
+  const availability = getAvailabilityInfo(doctor);
   const specialtiesText = doctor.specialties.join(", ");
+
+  // Formata os dias disponíveis (ex: Segunda, Quarta, Sexta)
+  const availableDaysText = availability.availableDays.join(", ");
 
   const formatPhoneNumber = (phone: string | null | undefined) => {
     if (!phone) return "";
     const cleaned = phone.replace(/\D/g, "");
     if (cleaned.length === 10) {
-      // Corrigido para pegar os últimos 4 dígitos corretamente
       return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(
-        6, // Corrigido
+        6,
       )}`;
     }
     return phone;
@@ -107,10 +112,10 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
   };
 
   return (
-    // Adicionado Fragment para envolver os Dialogs
     <>
       <Card>
         <CardHeader>
+          {/* Header (mantém igual) */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
               <Avatar className="h-20 w-20">
@@ -154,18 +159,21 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
         </CardHeader>
         <Separator />
         <CardContent className="flex flex-col gap-2">
-          <Badge variant="outline">
-            <CalendarIcon className="mr-1" />
-            {availability.from.format("dddd")} a{" "}
-            {availability.to.format("dddd")}
+          {/* Disponibilidade Atualizada */}
+          <Badge variant="outline" className="whitespace-normal">
+            {" "}
+            {/* Permite quebra de linha */}
+            <CalendarIcon className="mr-1 h-3 w-3 flex-shrink-0" />
+            {availableDaysText || "Nenhum dia selecionado"}
           </Badge>
           <Badge variant="outline">
-            <ClockIcon className="mr-1" />
-            {availability.from.format("HH:mm")} às {/* Corrigido para 'às' */}
-            {availability.to.format("HH:mm")}
+            <ClockIcon className="mr-1 h-3 w-3" />
+            {availability.fromTime.format("HH:mm")} às{" "}
+            {availability.toTime.format("HH:mm")}
           </Badge>
         </CardContent>
         <Separator />
+        {/* Footer (mantém igual, mas passa o doctor correto para o form) */}
         <CardFooter className="flex flex-col gap-2">
           {/* Botão Ver Detalhes */}
           <Dialog
@@ -179,11 +187,12 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
               doctor={{
                 ...doctor,
                 dateOfBirth: doctor.dateOfBirth
-                  ? doctor.dateOfBirth.toString()
+                  ? doctor.dateOfBirth.toISOString().split("T")[0] // Garante formato YYYY-MM-DD
                   : null,
-                availableFromTime: availability.from.format("HH:mm:ss"),
-                availableToTime: availability.to.format("HH:mm:ss"),
+                availableFromTime: availability.fromTime.format("HH:mm:ss"),
+                availableToTime: availability.toTime.format("HH:mm:ss"),
                 specialties: doctor.specialties,
+                availableWeekDays: doctor.availableWeekDays, // Passa o array de números
               }}
               onSuccess={() => setIsUpsertDoctorDialogOpen(false)}
               isOpen={isUpsertDoctorDialogOpen}
@@ -201,7 +210,6 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
                 Histórico de Pagamentos
               </Button>
             </DialogTrigger>
-            {/* Renderiza o dialog de histórico passando o ID e nome */}
             {isPaymentHistoryOpen && (
               <PaymentHistoryDialog
                 recipientId={doctor.id}

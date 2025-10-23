@@ -32,25 +32,29 @@ export const upsertDoctor = actionClient
       availableFromTime,
       availableToTime,
       dateOfBirth,
-      availableFromWeekDay,
-      availableToWeekDay,
+      // availableFromWeekDay, // REMOVIDO
+      // availableToWeekDay, // REMOVIDO
+      availableWeekDays, // ADICIONADO
       ...rest
     } = parsedInput;
 
     const availableFromTimeUTC = dayjs()
       .set("hour", parseInt(availableFromTime.split(":")[0]))
       .set("minute", parseInt(availableFromTime.split(":")[1]))
-      .set("second", parseInt(availableFromTime.split(":")[2]))
+      .set("second", parseInt(availableFromTime.split(":")[2] || "0")) // Default 0
       .utc();
     const availableToTimeUTC = dayjs()
       .set("hour", parseInt(availableToTime.split(":")[0]))
       .set("minute", parseInt(availableToTime.split(":")[1]))
-      .set("second", parseInt(availableToTime.split(":")[2]))
+      .set("second", parseInt(availableToTime.split(":")[2] || "0")) // Default 0
       .utc();
 
     const formattedDateOfBirth = dateOfBirth
       ? dayjs(dateOfBirth).format("YYYY-MM-DD")
       : "";
+
+    // Converte os dias da semana de string para número
+    const availableWeekDaysInt = availableWeekDays.map(Number);
 
     const values = {
       ...rest,
@@ -58,8 +62,9 @@ export const upsertDoctor = actionClient
       clinicId: session.user.clinic.id,
       availableFromTime: availableFromTimeUTC.format("HH:mm:ss"),
       availableToTime: availableToTimeUTC.format("HH:mm:ss"),
-      availableFromWeekDay: parseInt(availableFromWeekDay),
-      availableToWeekDay: parseInt(availableToWeekDay),
+      // availableFromWeekDay: parseInt(availableFromWeekDay), // REMOVIDO
+      // availableToWeekDay: parseInt(availableToWeekDay), // REMOVIDO
+      availableWeekDays: availableWeekDaysInt, // ADICIONADO (array de números)
     };
 
     if (values.id) {
