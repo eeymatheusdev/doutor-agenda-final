@@ -36,10 +36,9 @@ export const clinicFinanceSchema = z
     amount: z.number().positive("O valor deve ser maior que zero."),
     paymentDate: z.date().optional().nullable(),
     dueDate: z.date().optional().nullable(),
-    status: z
-      .enum(clinicFinancialStatusEnum.enumValues)
-      .optional()
-      .default("pending"), // Default to pending, removed refine
+    // --- Garantir que .optional() foi removido ---
+    status: z.enum(clinicFinancialStatusEnum.enumValues).default("pending"), // Default to pending
+    // --- Fim da Garantia ---
     paymentMethod: z
       .enum(clinicPaymentMethodsEnum.enumValues)
       .optional()
@@ -101,4 +100,5 @@ export const clinicFinanceSchema = z
     path: ["paymentMethod"],
   });
 
+// O tipo inferido ClinicFinanceSchema já reflete o tipo *após* a validação/defaults
 export type ClinicFinanceSchema = z.infer<typeof clinicFinanceSchema>;

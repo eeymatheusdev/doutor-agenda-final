@@ -6,8 +6,9 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import dayjs from "dayjs";
 import { CalendarIcon } from "lucide-react";
-import { parseAsIsoDate, useQueryState } from "nuqs"; // Removed useQueryStates as it's not used
-import React, { useEffect } from "react"; // Removed useState as form handles state
+// Remove parseAsString import if not used elsewhere, keep parseAsIsoDate
+import { parseAsIsoDate, useQueryState } from "nuqs";
+import React, { useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -39,13 +40,12 @@ import {
 } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-// CORRECTED IMPORT PATH
 import {
-  ClinicFinancialOperation, // Import types
+  ClinicFinancialOperation,
   clinicFinancialOperations,
   ClinicFinancialStatus,
   clinicFinancialStatuses,
-} from "../index"; // <-- Corrected path
+} from "../index";
 
 // Schema for form (optional fields)
 const filterSchema = z.object({
@@ -60,15 +60,18 @@ type FilterFormValues = z.infer<typeof filterSchema>;
 
 export function FinancialsFilters() {
   // Use nuqs for URL state management
-  const [status, setStatus] = useQueryState<ClinicFinancialStatus | null>(
-    "status",
-    { defaultValue: null, history: "replace" },
-  );
-  const [operation, setOperation] =
-    useQueryState<ClinicFinancialOperation | null>("operation", {
-      defaultValue: null,
-      history: "replace",
-    });
+  // --- CORRECTION: Remove .withDefault(null) and handle null explicitly ---
+  const [status, setStatus] = useQueryState("status", {
+    history: "replace",
+    // Use shallow: false if navigation needs to trigger server actions/data refetch
+    // shallow: false
+  });
+  const [operation, setOperation] = useQueryState("operation", {
+    history: "replace",
+    // shallow: false
+  });
+  // --- END CORRECTION ---
+
   const [from, setFrom] = useQueryState(
     "from",
     parseAsIsoDate
@@ -85,8 +88,9 @@ export function FinancialsFilters() {
   const form = useForm<FilterFormValues>({
     resolver: zodResolver(filterSchema),
     defaultValues: {
-      status: status ?? undefined, // Initialize form with URL values
-      operation: operation ?? undefined,
+      // Initialize form ensuring null is treated as undefined for the form state if needed
+      status: (status as ClinicFinancialStatus) ?? undefined,
+      operation: (operation as ClinicFinancialOperation) ?? undefined,
     },
   });
 
@@ -96,11 +100,15 @@ export function FinancialsFilters() {
 
   useEffect(() => {
     // Only update if the form value differs from the URL state
-    if (watchedStatus !== status) {
-      setStatus(watchedStatus || null);
+    // Allow setting back to null explicitly
+    const newStatus = watchedStatus || null;
+    const newOperation = watchedOperation || null;
+
+    if (newStatus !== status) {
+      setStatus(newStatus);
     }
-    if (watchedOperation !== operation) {
-      setOperation(watchedOperation || null);
+    if (newOperation !== operation) {
+      setOperation(newOperation);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedStatus, watchedOperation]);
@@ -108,8 +116,9 @@ export function FinancialsFilters() {
   // Update form when URL changes (e.g., back button)
   useEffect(() => {
     form.reset({
-      status: status ?? undefined,
-      operation: operation ?? undefined,
+      // Ensure null from URL becomes undefined for the form if needed, or handle null directly
+      status: (status as ClinicFinancialStatus) ?? undefined,
+      operation: (operation as ClinicFinancialOperation) ?? undefined,
     });
   }, [status, operation, form]);
 
@@ -122,8 +131,8 @@ export function FinancialsFilters() {
 
   const handleClearFilters = () => {
     form.reset({ status: undefined, operation: undefined });
-    setStatus(null);
-    setOperation(null);
+    setStatus(null); // Explicitly set URL state to null
+    setOperation(null); // Explicitly set URL state to null
     setFrom(dayjs().startOf("month").toDate()); // Reset date to default
     setTo(dayjs().endOf("month").toDate());
   };
@@ -131,7 +140,7 @@ export function FinancialsFilters() {
   return (
     <Form {...form}>
       {/* Added md:items-end for better alignment on medium screens */}
-      <form className="flex flex-col items-start gap-4 md:flex-row md:flex-wrap md:items-end">
+      <form className="mb-6 flex flex-col items-start gap-4 md:flex-row md:flex-wrap md:items-end">
         {/* Date Range Picker */}
         <div className="flex flex-col gap-2">
           <FormLabel>Período</FormLabel>
@@ -182,10 +191,12 @@ export function FinancialsFilters() {
             <FormItem>
               <FormLabel>Status</FormLabel>
               <Select
+                // Update form state: map 'all' to null/undefined
                 onValueChange={(value) =>
                   field.onChange(value === "all" ? null : value)
-                } // Set null for 'all'
-                value={field.value ?? "all"} // Use 'all' if null
+                }
+                // Read form state: map null/undefined to 'all' for display
+                value={field.value ?? "all"}
               >
                 <FormControl>
                   <SelectTrigger className="w-full md:w-[180px]">
@@ -213,9 +224,11 @@ export function FinancialsFilters() {
             <FormItem>
               <FormLabel>Operação</FormLabel>
               <Select
+                // Update form state: map 'all' to null/undefined
                 onValueChange={(value) =>
                   field.onChange(value === "all" ? null : value)
                 }
+                // Read form state: map null/undefined to 'all' for display
                 value={field.value ?? "all"}
               >
                 <FormControl>

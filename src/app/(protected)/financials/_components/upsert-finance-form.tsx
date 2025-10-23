@@ -5,17 +5,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  CalendarIcon,
-  Check,
-  DollarSign, // Not used, can be removed if desired
-  Info,
-  Loader2,
-  Users, // Not used, can be removed if desired
-} from "lucide-react";
+import { CalendarIcon, Check, Info, Loader2 } from "lucide-react"; // Ícones relevantes
 import { useAction } from "next-safe-action/hooks";
-import React, { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import React, { useEffect, useState } from "react";
+// CORREÇÃO: Importar FieldValues para tipagem mais precisa
+import { FieldValues, useForm } from "react-hook-form";
 import { NumericFormat } from "react-number-format";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -25,7 +19,7 @@ import {
   ClinicFinanceSchema,
   clinicFinanceSchema,
 } from "@/actions/clinic-finances/schema";
-import { getPatientFinances } from "@/actions/patient-finances"; // Buscar cobranças do paciente
+import { getPatientFinances } from "@/actions/patient-finances";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -60,7 +54,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator"; // Not used, can be removed if desired
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -70,69 +63,55 @@ import {
 } from "@/components/ui/tooltip";
 import {
   clinicFinancesTable,
-  clinicFinancialTypeInputEnum, // Import enum
-  clinicFinancialTypeOutputEnum, // Import enum
-  clinicPaymentMethodsEnum, // Import enum for payment methods
-  doctorsTable, // Not used directly, but kept for type definition context
+  clinicPaymentMethodsEnum,
   employeesTable,
   patientsTable,
-  usersTable, // Not used directly, but kept for type definition context
 } from "@/db/schema";
 import { formatCurrencyInCents } from "@/helpers/currency";
 import { cn } from "@/lib/utils";
 
-// CORRECTED IMPORT PATH
 import {
-  ClinicFinancialOperation, // Import types
   clinicFinancialOperations,
-  ClinicFinancialStatus, // Import status type
   clinicFinancialStatuses,
-  clinicFinancialTypesInput, // Import input types constant
-  clinicFinancialTypesOutput, // Import output types constant
-} from "../index"; // <-- Corrected path
+  clinicFinancialTypesInput,
+  clinicFinancialTypesOutput,
+} from "../index";
 
 type FinanceEntry = typeof clinicFinancesTable.$inferSelect & {
   patient?: { id: string; name: string } | null;
-  employee?: { id: string; name: string } | null; // Inclui médico ou funcionário
+  employee?: { id: string; name: string } | null;
 };
 
-// Tipos simplificados para selects
 type SelectOption = { id: string; name: string };
-type PatientChargeOption = {
-  // Not used directly, kept for context
-  id: number;
-  description: string | null;
-  amountInCents: number;
-  dueDate: string | null;
-};
 
 interface UpsertFinanceFormProps {
   entry?: FinanceEntry;
   onSuccess?: () => void;
-  // Passar listas para selects
   patients: SelectOption[];
-  employeesAndDoctors: SelectOption[]; // Lista combinada
+  employeesAndDoctors: SelectOption[];
 }
 
-// Helper para converter string de valor numérico para centavos (integer)
 const valueToCents = (value: number | undefined | null): number => {
   if (value === null || value === undefined) return 0;
   return Math.round(value * 100);
 };
 
-// Helper para converter centavos (integer) para valor numérico (float)
 const centsToValue = (cents: number | undefined | null): number => {
   if (cents === null || cents === undefined) return 0;
   return cents / 100;
 };
 
-// Mapeamento dos métodos de pagamento para exibição
 const clinicPaymentMethods = clinicPaymentMethodsEnum.enumValues.map(
   (value) => ({
     value,
-    label: value, // Você pode mapear para labels mais amigáveis se quiser
+    label: value,
   }),
 );
+
+// Define o tipo explicitamente para defaultValues, garantindo que status seja do tipo correto
+type FormDefaultValues = Omit<ClinicFinanceSchema, "amount"> & {
+  amount: number;
+};
 
 export default function UpsertFinanceForm({
   entry,
@@ -145,29 +124,35 @@ export default function UpsertFinanceForm({
     number[]
   >(entry?.linkedPatientChargeIds ?? []);
 
+  const initialStatus =
+    entry?.status === "overdue" || entry?.status === "refunded"
+      ? "pending"
+      : (entry?.status ?? "pending");
+
+  // Define os valores padrão garantindo a conformidade com ClinicFinanceSchema (especialmente 'status')
+  const defaultValues: FormDefaultValues = {
+    id: entry?.id,
+    operation: entry?.operation ?? "input", // Fornecer um default válido se 'entry' não existir
+    typeInput: entry?.typeInput ?? undefined, // Manter undefined se não aplicável inicialmente
+    typeOutput: entry?.typeOutput ?? undefined, // Manter undefined se não aplicável inicialmente
+    description: entry?.description ?? "",
+    amount: centsToValue(entry?.amountInCents),
+    paymentDate: entry?.paymentDate ? new Date(entry.paymentDate) : undefined,
+    dueDate: entry?.dueDate ? new Date(entry.dueDate) : undefined,
+    status: initialStatus, // Garante que status sempre tem um valor válido
+    paymentMethod: entry?.paymentMethod ?? undefined, // Manter undefined se não aplicável inicialmente
+    observations: entry?.observations ?? "",
+    patientId: entry?.patientId ?? undefined, // Manter undefined se não aplicável inicialmente
+    employeeId: entry?.employeeId ?? undefined, // Manter undefined se não aplicável inicialmente
+    linkedPatientChargeIds: entry?.linkedPatientChargeIds ?? [],
+  };
+
   const form = useForm<ClinicFinanceSchema>({
+    // Usar o tipo de saída do Zod
     resolver: zodResolver(clinicFinanceSchema),
-    defaultValues: {
-      id: entry?.id,
-      operation: entry?.operation ?? undefined,
-      typeInput: entry?.typeInput ?? undefined,
-      typeOutput: entry?.typeOutput ?? undefined,
-      description: entry?.description ?? "",
-      amount: centsToValue(entry?.amountInCents), // Converter centavos para valor
-      paymentDate: entry?.paymentDate ? new Date(entry.paymentDate) : undefined,
-      dueDate: entry?.dueDate ? new Date(entry.dueDate) : undefined,
-      // Não permitir 'overdue' ou 'refunded' inicialmente
-      status:
-        entry?.status === "overdue" || entry?.status === "refunded"
-          ? "pending"
-          : (entry?.status ?? "pending"),
-      paymentMethod: entry?.paymentMethod ?? undefined,
-      observations: entry?.observations ?? "",
-      patientId: entry?.patientId ?? undefined,
-      employeeId: entry?.employeeId ?? undefined,
-      linkedPatientChargeIds: entry?.linkedPatientChargeIds ?? [],
-    },
-    mode: "onBlur", // Validar ao perder o foco
+    // Fornecer defaultValues que satisfazem ClinicFinanceSchema
+    defaultValues: defaultValues,
+    mode: "onBlur",
   });
 
   const watchedOperation = form.watch("operation");
@@ -217,22 +202,22 @@ export default function UpsertFinanceForm({
       form.setValue("amount", centsToValue(totalSelectedAmount), {
         shouldValidate: true,
       });
-      form.setValue("linkedPatientChargeIds", selectedPatientCharges); // Atualiza os IDs vinculados
+      form.setValue("linkedPatientChargeIds", selectedPatientCharges);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedPatientCharges,
     patientChargesData,
-    form,
+    form.setValue,
     watchedOperation,
     watchedTypeInput,
-  ]);
+  ]); // Adicionado form.setValue
 
   const { execute, isExecuting } = useAction(upsertClinicFinance, {
     onSuccess: () => {
       toast.success("Lançamento salvo com sucesso.");
       queryClient.invalidateQueries({ queryKey: ["clinic-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clinic-finance-summary"] });
-      // Invalidar cobranças do paciente se foi um pagamento vinculado
       if (
         watchedPatientId &&
         watchedOperation === "input" &&
@@ -245,7 +230,7 @@ export default function UpsertFinanceForm({
         });
         queryClient.invalidateQueries({
           queryKey: ["patient-charges", watchedPatientId],
-        }); // Invalidar a query específica das cobranças
+        });
       }
       onSuccess?.();
     },
@@ -256,11 +241,10 @@ export default function UpsertFinanceForm({
   });
 
   function onSubmit(values: ClinicFinanceSchema) {
-    // Garantir que amount seja número antes de enviar
+    // Espera o tipo de saída
     const submitValues = {
       ...values,
       amount: Number(values.amount) || 0,
-      // Limpar IDs não relevantes ANTES de enviar
       patientId:
         values.operation === "input" && values.patientId
           ? values.patientId
@@ -270,19 +254,19 @@ export default function UpsertFinanceForm({
           ? values.employeeId
           : null,
       linkedPatientChargeIds:
-        values.operation === "input" && values.linkedPatientChargeIds
+        values.operation === "input" &&
+        values.linkedPatientChargeIds &&
+        values.linkedPatientChargeIds.length > 0
           ? values.linkedPatientChargeIds
-          : null,
-      // Limpar tipos não relevantes
+          : null, // Certificar que envia null se vazio
       typeInput: values.operation === "input" ? values.typeInput : undefined,
       typeOutput: values.operation === "output" ? values.typeOutput : undefined,
-      // Limpar método de pagamento se não for relevante
       paymentMethod: values.status === "paid" ? values.paymentMethod : null,
+      status: values.status, // Já deve ser válido
     };
     execute(submitValues);
   }
 
-  // Lógica para lidar com seleção/desseleção de cobranças do paciente
   const handleChargeSelection = (chargeId: number) => {
     setSelectedPatientCharges((prevSelected) => {
       if (prevSelected.includes(chargeId)) {
@@ -293,68 +277,73 @@ export default function UpsertFinanceForm({
     });
   };
 
-  // Resetar campos condicionais quando a operação muda
   useEffect(() => {
-    if (watchedOperation === "input") {
-      form.setValue("typeOutput", undefined);
-      form.setValue("employeeId", null);
-      // Manter patientId se typeInput for relacionado a paciente
-      if (
-        watchedTypeInput !== "Recebimento Consulta" &&
-        watchedTypeInput !== "Recebimento Procedimento" &&
-        watchedTypeInput !== "Recebimento Pacote" &&
-        watchedTypeInput !== "Crédito/Adiantamento Paciente"
-      ) {
+    const resetConditionalFields = (
+      operation: ClinicFinancialOperation | undefined,
+    ) => {
+      if (operation === "input") {
+        form.setValue("typeOutput", undefined);
+        form.setValue("employeeId", null);
+        if (
+          watchedTypeInput !== "Recebimento Consulta" &&
+          watchedTypeInput !== "Recebimento Procedimento" &&
+          watchedTypeInput !== "Recebimento Pacote" &&
+          watchedTypeInput !== "Crédito/Adiantamento Paciente"
+        ) {
+          form.setValue("patientId", null);
+          form.setValue("linkedPatientChargeIds", []);
+          setSelectedPatientCharges([]);
+        }
+      } else if (operation === "output") {
+        form.setValue("typeInput", undefined);
         form.setValue("patientId", null);
         form.setValue("linkedPatientChargeIds", []);
         setSelectedPatientCharges([]);
-      }
-    } else if (watchedOperation === "output") {
-      form.setValue("typeInput", undefined);
-      form.setValue("patientId", null);
-      form.setValue("linkedPatientChargeIds", []);
-      setSelectedPatientCharges([]);
-      // Manter employeeId se typeOutput for pagamento de funcionário
-      if (watchedTypeOutput !== "Pagamento Funcionário") {
+        if (watchedTypeOutput !== "Pagamento Funcionário") {
+          form.setValue("employeeId", null);
+        }
+      } else {
+        form.setValue("typeInput", undefined);
+        form.setValue("typeOutput", undefined);
+        form.setValue("patientId", null);
         form.setValue("employeeId", null);
+        form.setValue("linkedPatientChargeIds", []);
+        setSelectedPatientCharges([]);
       }
-    } else {
-      // Limpar tudo se operação não estiver definida
-      form.setValue("typeInput", undefined);
-      form.setValue("typeOutput", undefined);
-      form.setValue("patientId", null);
-      form.setValue("employeeId", null);
-      form.setValue("linkedPatientChargeIds", []);
-      setSelectedPatientCharges([]);
-    }
+    };
+    resetConditionalFields(watchedOperation);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedOperation, form.setValue]);
+  }, [watchedOperation, form.setValue]); // watchedTypeInput/Output removidos para evitar loops indesejados
 
-  // Resetar campos específicos quando o tipo muda DENTRO da operação
   useEffect(() => {
     if (watchedOperation === "input") {
       if (
         watchedTypeInput !== "Recebimento Consulta" &&
         watchedTypeInput !== "Recebimento Procedimento" &&
         watchedTypeInput !== "Recebimento Pacote" &&
-        watchedTypeInput !== "Crédito/Adiantamento Paciente"
+        watchedTypeInput !== "Crédito/Adiantamento Paciente" &&
+        form.getValues("patientId") // Só limpa se não for um tipo relacionado a paciente
       ) {
         form.setValue("patientId", null);
         form.setValue("linkedPatientChargeIds", []);
         setSelectedPatientCharges([]);
       } else if (watchedTypeInput === "Crédito/Adiantamento Paciente") {
+        // Se for crédito, limpa apenas os linked charges, mantém patientId
         form.setValue("linkedPatientChargeIds", []);
         setSelectedPatientCharges([]);
-        // Permitir edição do valor para crédito
       }
     } else if (watchedOperation === "output") {
-      if (watchedTypeOutput !== "Pagamento Funcionário") {
+      if (
+        watchedTypeOutput !== "Pagamento Funcionário" &&
+        form.getValues("employeeId")
+      ) {
+        // Só limpa se não for pagamento de funcionário
         form.setValue("employeeId", null);
       }
     }
-  }, [watchedTypeInput, watchedTypeOutput, form.setValue, watchedOperation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedTypeInput, watchedTypeOutput, form.setValue, watchedOperation]); // Adicionado form.getValues
 
-  // Filtra os status disponíveis (remove 'overdue' e 'refunded' da seleção manual)
   const availableStatuses = clinicFinancialStatuses.filter(
     (s) => s.value !== "overdue" && s.value !== "refunded",
   );
@@ -383,7 +372,8 @@ export default function UpsertFinanceForm({
                 <FormLabel>Operação</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  value={field.value ?? ""}
+                  // CORREÇÃO: Usar valor do field, default já tratado no useForm
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -613,8 +603,12 @@ export default function UpsertFinanceForm({
                       </div>
                     )}
                 </ScrollArea>
-                <FormMessage />{" "}
-                {/* Mensagem de erro para linkedPatientChargeIds (se a validação falhar) */}
+                {/* Exibir mensagem de erro do Zod para linkedPatientChargeIds se houver */}
+                <FormField
+                  control={form.control}
+                  name="linkedPatientChargeIds"
+                  render={() => <FormMessage />}
+                />
               </FormItem>
             )}
 
@@ -626,7 +620,11 @@ export default function UpsertFinanceForm({
               <FormItem>
                 <FormLabel>Descrição</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Detalhes da transação..." {...field} />
+                  <Textarea
+                    placeholder="Detalhes da transação..."
+                    {...field}
+                    value={field.value ?? ""} // Garantir que não seja null
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -649,10 +647,9 @@ export default function UpsertFinanceForm({
                     decimalScale={2}
                     fixedDecimalScale
                     value={field.value}
-                    onValueChange={
-                      (values) => field.onChange(values.floatValue ?? 0) // Usar 0 se undefined
+                    onValueChange={(values) =>
+                      field.onChange(values.floatValue ?? 0)
                     }
-                    // Desabilitar edição se for pagamento vinculado a cobranças
                     disabled={
                       watchedOperation === "input" &&
                       (watchedTypeInput === "Recebimento Consulta" ||
@@ -768,29 +765,25 @@ export default function UpsertFinanceForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value ?? ""}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    {" "}
+                    {/* Agora seguro */}
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o status" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {availableStatuses.map(
-                        (
-                          s, // Usar lista filtrada
-                        ) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            {s.label}
-                          </SelectItem>
-                        ),
-                      )}
-                      {/* Mostrar status original se for Vencido ou Estornado (apenas visualização) */}
+                      {availableStatuses.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                      {/* Mostrar status original se for Vencido ou Estornado */}
                       {entry?.status &&
                         (entry.status === "overdue" ||
-                          entry.status === "refunded") && (
+                          entry.status === "refunded") &&
+                        entry.status === field.value && ( // Mostra apenas se for o valor atual
                           <SelectItem value={entry.status} disabled>
                             {entry.status === "overdue"
                               ? "Vencido"
@@ -822,7 +815,6 @@ export default function UpsertFinanceForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {/* Idealmente, buscaria da config da clínica, mas usamos a lista geral por enquanto */}
                         {clinicPaymentMethods.map((method) => (
                           <SelectItem key={method.value} value={method.value}>
                             {method.label}
