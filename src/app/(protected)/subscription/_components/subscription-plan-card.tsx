@@ -4,10 +4,17 @@
 
 import { loadStripe } from "@stripe/stripe-js";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+// Remover useRouter se não for mais necessário para gerenciar plano
+// import { useRouter } from "next/navigation";
+// *** CORREÇÃO: Importar 'useAction' do local correto ***
 import { useAction } from "next-safe-action/hooks";
 import { toast } from "sonner";
 
+// Importar o Form do Next.js 15 (se aplicável, senão usar form normal)
+// Assumindo que o projeto pode não estar no Next 15 ainda, usaremos form normal por segurança.
+// import { Form } from "next/form"; // Para Next 15+
+// Importar a nova action de cancelamento
+import { cancelSubscriptionAction } from "@/actions/cancel-subscription";
 import { createStripeCheckout } from "@/actions/create-stripe-checkout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +36,8 @@ interface SubscriptionPlanCardProps {
   planType: "monthly" | "semiannual" | "annual";
   features?: string[];
   isCurrentPlan?: boolean;
+  activeSubscriptionId?: string | null; // Adicionado para passar o ID da assinatura ativa
+  hasActiveSubscription: boolean; // Adicionado para saber se existe alguma assinatura ativa
   userEmail: string;
   className?: string;
 }
@@ -41,12 +50,17 @@ export function SubscriptionPlanCard({
   priceId,
   planType,
   isCurrentPlan = false,
+  activeSubscriptionId, // Recebe o ID da assinatura
+  hasActiveSubscription, // Recebe o status geral de assinatura
   userEmail,
   className,
 }: SubscriptionPlanCardProps) {
-  const router = useRouter();
+  // Remover useRouter se não for mais necessário
+  // const router = useRouter();
+
   const createStripeCheckoutAction = useAction(createStripeCheckout, {
     onSuccess: async ({ data }) => {
+      // ... (lógica existente de checkout)
       if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
         throw new Error("Stripe publishable key not found");
       }
@@ -66,24 +80,43 @@ export function SubscriptionPlanCard({
     },
   });
 
+  // Action para cancelamento
+  const cancelSubscription = useAction(cancelSubscriptionAction, {
+    onSuccess: () => {
+      toast.success(
+        "Sua assinatura será cancelada no final do período de faturamento.",
+      );
+      // Revalidação já acontece na action, não precisa redirect aqui
+    },
+    onError: (error) => {
+      console.error("Subscription Cancel Error:", error);
+      toast.error(error.error.serverError || "Erro ao cancelar assinatura.");
+    },
+  });
+
   const handleSubscribeClick = () => {
     createStripeCheckoutAction.execute({ priceId, planType });
   };
 
-  const handleManagePlanClick = () => {
-    if (process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL_URL) {
-      router.push(
-        `${process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL_URL}?prefilled_email=${userEmail}`,
-      );
-    } else {
-      toast.error("URL do portal do cliente não configurada.");
+  // Handler para o formulário de cancelamento
+  const handleCancelSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault(); // Previne o envio padrão do formulário
+    if (!activeSubscriptionId) {
+      toast.error("ID da assinatura não encontrado.");
+      return;
     }
+    cancelSubscription.execute({ subscriptionId: activeSubscriptionId });
   };
 
   const R$ = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
+
+  // Desabilita o botão "Assinar Agora" se não for o plano atual E já existir uma assinatura ativa
+  const shouldDisableSubscribe = !isCurrentPlan && hasActiveSubscription;
 
   return (
     <Card
@@ -111,22 +144,44 @@ export function SubscriptionPlanCard({
 
       <CardContent className="flex flex-1 flex-col">
         <div className="mt-auto">
-          <Button
-            className="w-full"
-            variant={isCurrentPlan ? "outline" : "default"}
-            onClick={
-              isCurrentPlan ? handleManagePlanClick : handleSubscribeClick
-            }
-            disabled={createStripeCheckoutAction.isExecuting}
-          >
-            {createStripeCheckoutAction.isExecuting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : isCurrentPlan ? (
-              "Gerenciar Assinatura"
-            ) : (
-              "Assinar Agora"
-            )}
-          </Button>
+          {isCurrentPlan ? (
+            // Formulário para cancelar a assinatura atual
+            <form onSubmit={handleCancelSubmit}>
+              {/* Input hidden para passar o ID da assinatura */}
+              <input
+                type="hidden"
+                name="subscriptionId"
+                value={activeSubscriptionId || ""}
+              />
+              <Button
+                type="submit"
+                variant="destructive" // Mudar para variante destrutiva
+                className="w-full"
+                disabled={
+                  cancelSubscription.isExecuting || !activeSubscriptionId
+                }
+              >
+                {cancelSubscription.isExecuting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Cancelar Assinatura
+              </Button>
+            </form>
+          ) : (
+            // Botão para assinar um novo plano
+            <Button
+              className="w-full"
+              onClick={handleSubscribeClick}
+              disabled={
+                createStripeCheckoutAction.isExecuting || shouldDisableSubscribe
+              } // Desabilita se houver assinatura ativa
+            >
+              {createStripeCheckoutAction.isExecuting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Assinar Agora
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

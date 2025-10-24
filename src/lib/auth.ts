@@ -24,20 +24,30 @@ export const auth = betterAuth({
       const [userData, clinics] = await Promise.all([
         db.query.usersTable.findFirst({
           where: eq(usersTable.id, user.id),
+          // Explicitly select the needed fields
+          columns: {
+            plan: true,
+            stripeSubscriptionId: true,
+            stripeCustomerId: true,
+          },
         }),
         db.query.usersToClinicsTable.findMany({
           where: eq(usersToClinicsTable.userId, user.id),
           with: {
             clinic: true,
-            user: true,
+            user: true, // User might not be needed here if only clinic info is used
           },
         }),
       ]);
       const clinic = clinics?.[0];
       return {
         user: {
-          ...user,
+          ...user, // Include base user fields like id, name, email, etc.
           plan: userData?.plan,
+          // *** ADDED stripeSubscriptionId and stripeCustomerId ***
+          stripeSubscriptionId: userData?.stripeSubscriptionId,
+          stripeCustomerId: userData?.stripeCustomerId,
+          // *** END ADDED ***
           clinic: clinic?.clinicId
             ? {
                 id: clinic?.clinicId,
@@ -83,3 +93,9 @@ export const auth = betterAuth({
     enabled: true,
   },
 });
+
+// Explicitly define the SessionUser type if needed elsewhere, inferring from the customSession return
+// This helps TypeScript understand the final shape of session.user
+export type CustomSessionUser = Awaited<
+  ReturnType<ReturnType<typeof customSession<typeof auth>>["__init__"]>
+>["user"];

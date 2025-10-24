@@ -52,6 +52,13 @@ const SubscriptionPage = async () => {
   if (!session.user.clinic) {
     redirect("/clinic");
   }
+  // Se o usuário não tem plano e não tem ID de assinatura, redireciona para nova assinatura
+  if (!session.user.plan && !session.user.stripeSubscriptionId) {
+    redirect("/new-subscription");
+  }
+
+  // Verifica se existe alguma assinatura ativa (baseado na existência do plan no user session)
+  const hasActiveSubscription = !!session.user.plan;
 
   return (
     <PageContainer>
@@ -70,6 +77,8 @@ const SubscriptionPage = async () => {
               key={plan.planType}
               {...plan}
               isCurrentPlan={session.user.plan === plan.planType}
+              activeSubscriptionId={session.user.stripeSubscriptionId} // Passa o ID da assinatura
+              hasActiveSubscription={hasActiveSubscription} // Passa o status geral
               userEmail={session.user.email}
             />
           ))}
