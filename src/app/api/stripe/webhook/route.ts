@@ -52,34 +52,33 @@ export const POST = async (request: Request) => {
       const customerId = invoice.customer;
 
       let subscriptionId: string | null = null;
-      if (invoice.lines && invoice.lines.data.length > 0) {
-        // Find the line item that *has* a 'subscription' property.
+
+      // Primary way: Get subscription ID from the first line item that has it
+      if (invoice.lines?.data?.length > 0) {
         const subscriptionLineItem = invoice.lines.data.find(
-          (item) => item.subscription, // Check if subscription property exists and is truthy
+          (item) => item.subscription,
         );
 
-        if (subscriptionLineItem && subscriptionLineItem.subscription) {
-          // *** CORRECTION: Handle both string and object cases ***
+        if (subscriptionLineItem?.subscription) {
           if (typeof subscriptionLineItem.subscription === "string") {
             subscriptionId = subscriptionLineItem.subscription;
           } else if (
             typeof subscriptionLineItem.subscription === "object" &&
             subscriptionLineItem.subscription.id
           ) {
-            // If it's an expanded object, get the id
             subscriptionId = subscriptionLineItem.subscription.id;
           }
-          // *** END CORRECTION ***
-        } else if (invoice.subscription) {
-          // Fallback to direct property if line item doesn't have it explicitly
-          if (typeof invoice.subscription === "string") {
-            subscriptionId = invoice.subscription;
-          } else if (
-            typeof invoice.subscription === "object" &&
-            invoice.subscription.id
-          ) {
-            subscriptionId = invoice.subscription.id;
-          }
+        }
+      }
+
+      // Fallback: If not found in line items, check if the invoice object itself has it (less common now but good for safety)
+      // This requires casting invoice to any to bypass the strict type check, acknowledging potential API variations.
+      if (!subscriptionId && (invoice as any).subscription) {
+        const sub = (invoice as any).subscription;
+        if (typeof sub === "string") {
+          subscriptionId = sub;
+        } else if (typeof sub === "object" && sub.id) {
+          subscriptionId = sub.id;
         }
       }
 
@@ -87,7 +86,6 @@ export const POST = async (request: Request) => {
       let metadata: { userId?: string; planType?: string } | null = null;
       if (typeof subscriptionId === "string") {
         try {
-          // It's important that stripe.subscriptions.retrieve gets just the ID string
           const subscription =
             await stripe.subscriptions.retrieve(subscriptionId);
           metadata = subscription.metadata;
@@ -119,7 +117,7 @@ export const POST = async (request: Request) => {
         await db
           .update(usersTable)
           .set({
-            stripeSubscriptionId: subscriptionId, // Ensure this is the string ID
+            stripeSubscriptionId: subscriptionId,
             stripeCustomerId: customerId,
             plan: metadata.planType,
           })

@@ -1,3 +1,4 @@
+// src/lib/auth.ts
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { customSession } from "better-auth/plugins";
@@ -44,10 +45,8 @@ export const auth = betterAuth({
         user: {
           ...user, // Include base user fields like id, name, email, etc.
           plan: userData?.plan,
-          // *** ADDED stripeSubscriptionId and stripeCustomerId ***
           stripeSubscriptionId: userData?.stripeSubscriptionId,
           stripeCustomerId: userData?.stripeCustomerId,
-          // *** END ADDED ***
           clinic: clinic?.clinicId
             ? {
                 id: clinic?.clinicId,
@@ -94,8 +93,10 @@ export const auth = betterAuth({
   },
 });
 
-// Explicitly define the SessionUser type if needed elsewhere, inferring from the customSession return
-// This helps TypeScript understand the final shape of session.user
-export type CustomSessionUser = Awaited<
-  ReturnType<ReturnType<typeof customSession<typeof auth>>["__init__"]>
->["user"];
+// Explicitly define the SessionUser type if needed elsewhere
+// *** CORREÇÃO APLICADA AQUI ***
+// Infer the user type from the return type of getSession
+type GetSessionReturnType = Awaited<ReturnType<typeof auth.api.getSession>>;
+export type CustomSessionUser = GetSessionReturnType extends { user: infer U }
+  ? U
+  : never;

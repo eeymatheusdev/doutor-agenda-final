@@ -42,6 +42,14 @@ export default async function NewSubscriptionPage() {
     redirect("/authentication");
   }
 
+  // Se o usuário já tem um plano ou assinatura ativa, redireciona para a página de gerenciamento
+  if (session.user.plan || session.user.stripeSubscriptionId) {
+    redirect("/subscription");
+  }
+
+  // Definindo hasActiveSubscription explicitamente como false para esta página
+  const hasActiveSubscription = false;
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-6">
       <div className="mb-8 w-full max-w-4xl text-center">
@@ -60,6 +68,10 @@ export default async function NewSubscriptionPage() {
             key={plan.planType}
             {...plan}
             userEmail={session.user.email}
+            // *** CORREÇÃO APLICADA AQUI ***
+            hasActiveSubscription={hasActiveSubscription}
+            // Não passamos activeSubscriptionId ou isCurrentPlan aqui,
+            // pois o componente tratará como nulo/falso por padrão
           />
         ))}
       </div>
