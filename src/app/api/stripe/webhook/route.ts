@@ -1,8 +1,6 @@
 // src/app/api/stripe/webhook/route.ts
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-// Remove redirect import if not used elsewhere in the file
-// import { redirect } from "next/navigation";
 import Stripe from "stripe";
 
 import { db } from "@/db";
@@ -47,9 +45,93 @@ export const POST = async (request: Request) => {
 
   // Handle the event
   switch (event.type) {
+    // --- NOVO HANDLER ---
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      console.log(`Processing checkout.session.completed event: ${session.id}`);
+
+      // Certifique-se de que a sessão está no modo de assinatura
+      if (session.mode !== "subscription") {
+        console.log(
+          `Ignoring checkout.session.completed event for non-subscription mode: ${session.id}`,
+        );
+        break;
+      }
+
+      const subscriptionId = session.subscription;
+      const customerId = session.customer;
+
+      if (
+        typeof subscriptionId !== "string" ||
+        typeof customerId !== "string"
+      ) {
+        console.error(
+          `Webhook checkout.session.completed: Missing subscriptionId or customerId for session ${session.id}`,
+        );
+        break;
+      }
+
+      let metadata: { userId?: string; planType?: string } | null = null;
+      try {
+        console.log(`Fetching subscription object: ${subscriptionId}`);
+        const subscription =
+          await stripe.subscriptions.retrieve(subscriptionId);
+        metadata = subscription.metadata;
+        console.log("Subscription metadata:", metadata);
+      } catch (subError) {
+        console.error(
+          `Webhook checkout.session.completed: Failed to retrieve subscription ${subscriptionId}`,
+          subError,
+        );
+        break; // Não pode continuar sem metadados
+      }
+
+      const userId = metadata?.userId;
+      const planType = metadata?.planType;
+
+      if (!userId || !planType) {
+        console.error(
+          `Webhook checkout.session.completed: Missing userId or planType in metadata for subscription ${subscriptionId}`,
+        );
+        break;
+      }
+
+      try {
+        console.log(
+          `Updating user ${userId} from checkout.session.completed with plan ${planType}`,
+        );
+        await db
+          .update(usersTable)
+          .set({
+            stripeSubscriptionId: subscriptionId,
+            stripeCustomerId: customerId,
+            plan: planType,
+          })
+          .where(eq(usersTable.id, userId));
+        console.log(
+          `Successfully updated user ${userId} with plan ${planType}, subscription ${subscriptionId}, customer ${customerId} from checkout session.`,
+        );
+      } catch (dbError) {
+        console.error(
+          `Webhook checkout.session.completed: DB update failed for user ${userId}`,
+          dbError,
+        );
+      }
+      break;
+    }
+    // --- FIM DO NOVO HANDLER ---
+
     case "invoice.paid": {
       const invoice = event.data.object as Stripe.Invoice;
-      console.log(`Processing invoice.paid event: ${invoice.id}`); // Log invoice ID
+      console.log(`Processing invoice.paid event: ${invoice.id}`);
+
+      // Adiciona verificação para ignorar se for a primeira fatura (já tratada por checkout.session.completed)
+      if (invoice.billing_reason === "subscription_create") {
+        console.log(
+          `Ignoring invoice.paid for subscription creation (handled by checkout.session.completed): ${invoice.id}`,
+        );
+        break;
+      }
 
       let customerId: string | null = null;
       if (typeof invoice.customer === "string") {
@@ -59,7 +141,6 @@ export const POST = async (request: Request) => {
       }
 
       let subscriptionId: string | null = null;
-      // Use 'as any' para acessar invoice.subscription se houver problemas de tipo
       const invoiceSubscription = (invoice as any).subscription;
       if (typeof invoiceSubscription === "string") {
         subscriptionId = invoiceSubscription;
@@ -70,13 +151,10 @@ export const POST = async (request: Request) => {
         subscriptionId = invoiceSubscription.id;
       }
 
-      // Fallback: Tentar pegar dos line items (menos comum para novas assinaturas)
       if (!subscriptionId && invoice.lines?.data?.length > 0) {
-        console.log("Attempting to find subscriptionId in line items...");
         const subscriptionLineItem = invoice.lines.data.find(
           (item) => item.subscription,
         );
-
         if (subscriptionLineItem?.subscription) {
           if (typeof subscriptionLineItem.subscription === "string") {
             subscriptionId = subscriptionLineItem.subscription;
@@ -89,11 +167,9 @@ export const POST = async (request: Request) => {
         }
       }
 
-      // Log IDs encontrados
       console.log(`Customer ID found: ${customerId}`);
       console.log(`Subscription ID found: ${subscriptionId}`);
 
-      // --- Fetch Subscription to get metadata ---
       let metadata: { userId?: string; planType?: string } | null = null;
       if (typeof subscriptionId === "string") {
         try {
@@ -102,8 +178,6 @@ export const POST = async (request: Request) => {
             await stripe.subscriptions.retrieve(subscriptionId);
           metadata = subscription.metadata;
           console.log("Subscription metadata:", metadata);
-
-          // Atualiza o customerId caso não tenha sido pego da fatura diretamente
           if (!customerId && typeof subscription.customer === "string") {
             customerId = subscription.customer;
             console.log(
@@ -115,47 +189,120 @@ export const POST = async (request: Request) => {
             `Webhook invoice.paid: Failed to retrieve subscription ${subscriptionId}`,
             subError,
           );
-          metadata = null; // Garante que metadata é null se a busca falhar
+          metadata = null;
         }
       } else {
         console.warn(
           `Webhook invoice.paid: subscriptionId not found or not a string for invoice ${invoice.id}. Cannot fetch metadata.`,
         );
       }
-      // --- End Fetch Subscription ---
 
       const userId = metadata?.userId;
       const planType = metadata?.planType;
 
-      if (!customerId || !subscriptionId || !userId || !planType) {
-        console.error("Webhook invoice.paid: Missing required data.", {
-          invoiceId: invoice.id,
-          customerId: customerId ?? "missing",
-          subscriptionId: subscriptionId ?? "missing",
-          metadataUserId: userId ?? "missing",
-          metadataPlanType: planType ?? "missing",
-        });
-        break; // Sai do switch se dados essenciais faltarem
+      // Para invoice.paid (renovações), userId e planType são importantes, mas talvez menos críticos se o usuário já tiver dados.
+      // O customerId e subscriptionId são essenciais.
+      if (!customerId || !subscriptionId) {
+        console.error(
+          "Webhook invoice.paid: Missing customerId or subscriptionId.",
+          {
+            invoiceId: invoice.id,
+            customerId: customerId ?? "missing",
+            subscriptionId: subscriptionId ?? "missing",
+          },
+        );
+        break;
       }
 
-      try {
-        console.log(`Updating user ${userId} with plan ${planType}`);
-        await db
-          .update(usersTable)
-          .set({
-            stripeSubscriptionId: subscriptionId,
-            stripeCustomerId: customerId, // Garante que o customerId está sendo salvo/atualizado
-            plan: planType, // Usa o planType dos metadados
-          })
-          .where(eq(usersTable.id, userId));
-        console.log(
-          `Successfully updated user ${userId} with plan ${planType}, subscription ${subscriptionId}, customer ${customerId}`,
+      // Tenta atualizar mesmo sem userId/planType nos metadados (para cobrir casos de renovação onde metadados podem não estar presentes)
+      // Idealmente, os metadados deveriam estar sempre lá.
+      if (!userId) {
+        console.warn(
+          `Webhook invoice.paid: userId missing in metadata for subscription ${subscriptionId}. Attempting update using customerId.`,
         );
-      } catch (dbError) {
-        console.error(
-          `Webhook invoice.paid: DB update failed for user ${userId}`,
-          dbError,
+        try {
+          // Busca o usuário pelo customerId
+          const user = await db.query.usersTable.findFirst({
+            where: eq(usersTable.stripeCustomerId, customerId),
+            columns: { id: true, plan: true }, // Pega o plano atual
+          });
+
+          if (user) {
+            // Atualiza apenas os IDs do Stripe se o plano já existir (renovação)
+            // Se o plano não existir mas o planType foi encontrado, atualiza tudo
+            const updateData: Partial<typeof usersTable.$inferInsert> = {
+              stripeSubscriptionId: subscriptionId,
+              stripeCustomerId: customerId,
+            };
+            if (!user.plan && planType) {
+              updateData.plan = planType; // Atualiza o plano se estava faltando
+              console.log(
+                `Updating plan for user ${user.id} to ${planType} based on invoice.paid event.`,
+              );
+            }
+            await db
+              .update(usersTable)
+              .set(updateData)
+              .where(eq(usersTable.id, user.id));
+            console.log(
+              `Successfully updated user ${user.id} (found via customerId) from invoice.paid.`,
+            );
+          } else {
+            console.error(
+              `Webhook invoice.paid: Could not find user with customerId ${customerId}.`,
+            );
+          }
+        } catch (dbError) {
+          console.error(
+            `Webhook invoice.paid: DB update failed for customer ${customerId}`,
+            dbError,
+          );
+        }
+      } else if (userId && planType) {
+        // Fluxo normal com metadados
+        try {
+          console.log(
+            `Updating user ${userId} from invoice.paid with plan ${planType}`,
+          );
+          await db
+            .update(usersTable)
+            .set({
+              stripeSubscriptionId: subscriptionId,
+              stripeCustomerId: customerId,
+              plan: planType,
+            })
+            .where(eq(usersTable.id, userId));
+          console.log(
+            `Successfully updated user ${userId} with plan ${planType}, subscription ${subscriptionId}, customer ${customerId} from invoice.paid.`,
+          );
+        } catch (dbError) {
+          console.error(
+            `Webhook invoice.paid: DB update failed for user ${userId}`,
+            dbError,
+          );
+        }
+      } else {
+        console.warn(
+          `Webhook invoice.paid: Missing planType in metadata for user ${userId}, subscription ${subscriptionId}. Updating IDs only.`,
         );
+        // Atualiza apenas os IDs se o planType estiver faltando
+        try {
+          await db
+            .update(usersTable)
+            .set({
+              stripeSubscriptionId: subscriptionId,
+              stripeCustomerId: customerId,
+            })
+            .where(eq(usersTable.id, userId!)); // userId deve existir neste ponto
+          console.log(
+            `Successfully updated Stripe IDs for user ${userId} from invoice.paid (planType missing).`,
+          );
+        } catch (dbError) {
+          console.error(
+            `Webhook invoice.paid: DB update failed (IDs only) for user ${userId}`,
+            dbError,
+          );
+        }
       }
       break;
     }
@@ -176,14 +323,14 @@ export const POST = async (request: Request) => {
           try {
             const user = await db.query.usersTable.findFirst({
               where: eq(usersTable.stripeCustomerId, customerId),
-              columns: { id: true }, // Buscar apenas o ID
+              columns: { id: true },
             });
             if (user) {
               await db
                 .update(usersTable)
                 .set({
                   stripeSubscriptionId: null,
-                  plan: null, // Limpa o plano também
+                  plan: null,
                 })
                 .where(eq(usersTable.id, user.id));
               console.log(
@@ -205,16 +352,15 @@ export const POST = async (request: Request) => {
             `Webhook customer.subscription.deleted: Missing userId in metadata and invalid customerId for subscription ${subscription.id}.`,
           );
         }
-        break; // Sai do switch
+        break;
       }
 
-      // Se userId existe nos metadados (fluxo normal)
       try {
         await db
           .update(usersTable)
           .set({
             stripeSubscriptionId: null,
-            plan: null, // Limpa o plano também
+            plan: null,
           })
           .where(eq(usersTable.id, userId));
         console.log(`Updated user ${userId} - subscription cancelled.`);
@@ -234,7 +380,6 @@ export const POST = async (request: Request) => {
       );
 
       const userId = subscription.metadata?.userId;
-      // Tentativa de obter o planType dos metadados ou do primeiro item do plano
       const planType =
         subscription.metadata?.planType ||
         (subscription.items.data[0]?.price?.metadata?.planType as
@@ -258,7 +403,6 @@ export const POST = async (request: Request) => {
             stripeCustomerId: customerId,
           };
 
-          // Atualiza o plano apenas se ele foi encontrado e a assinatura está ativa/trialing
           if (
             planType &&
             (subscription.status === "active" ||
@@ -267,17 +411,17 @@ export const POST = async (request: Request) => {
             updateData.plan = planType;
           }
 
-          // Se a assinatura foi cancelada (não apenas no fim do período), limpa o plano
           if (
             subscription.status === "canceled" ||
             subscription.cancel_at_period_end
           ) {
+            // Se cancel_at_period_end = true, não limpamos o plano aqui.
+            // O plano será limpo quando o evento 'customer.subscription.deleted' for recebido no final do período.
             if (subscription.status === "canceled") {
               // Cancelamento imediato
               updateData.plan = null;
-              updateData.stripeSubscriptionId = null; // Opcional: remover ID se cancelado imediatamente
+              updateData.stripeSubscriptionId = null; // Assinatura não existe mais
             }
-            // Se cancel_at_period_end for true, mantemos o plano e ID até que 'deleted' seja recebido
           }
 
           await db
@@ -285,7 +429,7 @@ export const POST = async (request: Request) => {
             .set(updateData)
             .where(eq(usersTable.id, userId));
           console.log(
-            `User ${userId} updated for subscription ${subscription.id}. Plan: ${updateData.plan ?? "unchanged/cleared"}.`,
+            `User ${userId} updated for subscription ${subscription.id}. Plan: ${updateData.plan ?? "unchanged/cleared"}. Cancel at end: ${subscription.cancel_at_period_end}`,
           );
         } catch (dbError) {
           console.error(
@@ -305,6 +449,5 @@ export const POST = async (request: Request) => {
       console.log(`Unhandled event type ${event.type}`);
   }
 
-  // Return a response to acknowledge receipt of the event
   return NextResponse.json({ received: true });
 };
