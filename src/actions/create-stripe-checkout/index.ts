@@ -1,3 +1,4 @@
+// src/actions/create-stripe-checkout/index.ts
 "use server";
 
 import { headers } from "next/headers";
@@ -34,7 +35,7 @@ export const createStripeCheckout = actionClient
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/subscription`, // Retorna para a página de assinatura em caso de cancelamento
       subscription_data: {
         metadata: {
-          userId: session.user.id,
+          userId: session.user.id, // Adiciona o ID do usuário nos metadados
           planType: parsedInput.planType, // Adiciona o tipo de plano nos metadados
         },
       },
@@ -44,6 +45,13 @@ export const createStripeCheckout = actionClient
           quantity: 1,
         },
       ],
+      // Associar o checkout ao customerId, se já existir
+      customer: session.user.stripeCustomerId || undefined,
+      // Se não existir customerId, Stripe criará um novo.
+      // Podemos passar o email para pré-preencher ou associar a um customer existente pelo email.
+      customer_email: !session.user.stripeCustomerId
+        ? session.user.email
+        : undefined,
     });
     return {
       sessionId,
