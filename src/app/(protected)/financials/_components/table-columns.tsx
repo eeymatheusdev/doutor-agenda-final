@@ -5,31 +5,33 @@ import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+// Importa o helper para cabeçalhos ordenáveis
+import { DataTableColumnHeader } from "@/components/ui/data-table";
 import {
   clinicFinancesTable,
-  employeesTable, // Keep employeesTable
+  employeesTable, // Mantém employeesTable
   patientsTable,
   usersTable,
-} from "@/db/schema"; // Importar tabelas relacionadas
+} from "@/db/schema";
 import { formatCurrencyInCents } from "@/helpers/currency";
-import { cn } from "@/lib/utils"; // Importar cn
+import { cn } from "@/lib/utils";
 
-// CORRECTED IMPORT PATH
+// Importa os tipos e constantes do caminho corrigido
 import {
-  clinicFinancialOperations, // Import types
-  ClinicFinancialStatus, // Keep unused type for consistency if desired
+  clinicFinancialOperations,
+  ClinicFinancialStatus, // Mantido para referência se necessário
   clinicFinancialStatuses,
-} from "../index"; // <-- Corrected path
+} from "../index"; // <-- Caminho corrigido
 import FinancialsTableActions from "./table-actions";
 
-// Tipo expandido para incluir relações CORRIGIDO
+// Tipo expandido para incluir relações (sem alterações aqui)
 type Transaction = typeof clinicFinancesTable.$inferSelect & {
   patient: Pick<typeof patientsTable.$inferSelect, "id" | "name"> | null;
-  employee: Pick<typeof employeesTable.$inferSelect, "id" | "name"> | null; // Changed doctor to employee
+  employee: Pick<typeof employeesTable.$inferSelect, "id" | "name"> | null; // Continua sendo employee
   creator: Pick<typeof usersTable.$inferSelect, "id" | "name"> | null;
 };
 
-// Helper para obter label do status
+// Helpers (sem alterações aqui)
 const getStatusLabel = (
   statusValue:
     | (typeof clinicFinancialStatuses)[number]["value"]
@@ -43,7 +45,6 @@ const getStatusLabel = (
   );
 };
 
-// Helper para obter label da operação
 const getOperationLabel = (
   opValue:
     | (typeof clinicFinancialOperations)[number]["value"]
@@ -57,24 +58,35 @@ const getOperationLabel = (
   );
 };
 
+// Definição das colunas com cabeçalhos ordenáveis
 export const columns: ColumnDef<Transaction>[] = [
   {
     accessorKey: "operation",
-    header: "Operação",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Operação" />
+    ),
     cell: ({ row }) => getOperationLabel(row.original.operation),
+    enableSorting: true,
   },
   {
-    accessorKey: "type", // Combina typeInput e typeOutput
-    header: "Tipo",
+    accessorKey: "type",
+    header: "Tipo", // Não ordenável por padrão (combina dois campos)
     cell: ({ row }) => row.original.typeInput || row.original.typeOutput || "-",
+    enableSorting: false,
   },
   {
     accessorKey: "description",
-    header: "Descrição",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Descrição" />
+    ),
+    cell: ({ row }) => row.original.description,
+    enableSorting: true,
   },
   {
     accessorKey: "amountInCents",
-    header: "Valor",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Valor" />
+    ),
     cell: ({ row }) => {
       const amount = formatCurrencyInCents(row.original.amountInCents);
       const isOutput = row.original.operation === "output";
@@ -84,16 +96,21 @@ export const columns: ColumnDef<Transaction>[] = [
         </span>
       );
     },
+    enableSorting: true,
+    sortingFn: "basic", // Usa a ordenação básica pelo valor numérico
   },
   {
-    accessorKey: "relatedEntity", // Coluna combinada para Paciente ou Funcionário
-    header: "Relacionado a",
+    accessorKey: "relatedEntity",
+    header: "Relacionado a", // Pode ser difícil ordenar por nomes combinados
     cell: ({ row }) =>
       row.original.patient?.name || row.original.employee?.name || "-",
+    enableSorting: false, // Desabilitado por padrão
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
     cell: ({ row }) => {
       const status = row.original.status;
       let colorClass = "";
@@ -117,48 +134,53 @@ export const columns: ColumnDef<Transaction>[] = [
         </span>
       );
     },
+    enableSorting: true,
   },
   {
     accessorKey: "paymentDate",
-    header: "Data Pag./Rec.",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Data Pag./Rec." />
+    ),
     cell: ({ row }) =>
       row.original.paymentDate
         ? format(new Date(row.original.paymentDate), "dd/MM/yyyy", {
             locale: ptBR,
           })
         : "-",
+    enableSorting: true,
   },
   {
     accessorKey: "dueDate",
-    header: "Vencimento",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Vencimento" />
+    ),
     cell: ({ row }) =>
       row.original.dueDate
         ? format(new Date(row.original.dueDate), "dd/MM/yyyy", { locale: ptBR })
         : "-",
+    enableSorting: true,
   },
   {
     accessorKey: "paymentMethod",
-    header: "Forma Pag.",
+    header: "Forma Pag.", // Geralmente não ordenável
     cell: ({ row }) => row.original.paymentMethod || "-",
+    enableSorting: false,
   },
   {
     accessorKey: "createdAt",
-    header: "Criado em",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Criado em" />
+    ),
     cell: ({ row }) =>
       format(new Date(row.original.createdAt), "dd/MM/yy HH:mm", {
         locale: ptBR,
       }),
+    enableSorting: true,
   },
-  // { // Opcional: Mostrar quem criou
-  //   accessorKey: "creator.name",
-  //   header: "Criado por",
-  //   cell: ({ row }) => row.original.creator?.name ?? "-",
-  // },
   {
     id: "actions",
-    // CORREÇÃO: Passar props corretas para FinancialsTableActions
+    header: "Ações",
     cell: ({ row, table }) => {
-      // Acessar meta se disponível (assumindo que patients e employeesAndDoctors são passados via meta)
       const meta = table.options.meta as
         | {
             patients: { id: string; name: string }[];
@@ -168,13 +190,13 @@ export const columns: ColumnDef<Transaction>[] = [
       return (
         <FinancialsTableActions
           transaction={row.original}
-          patients={meta?.patients ?? []} // Usa dados do meta ou array vazio
-          employeesAndDoctors={meta?.employeesAndDoctors ?? []} // Usa dados do meta ou array vazio
+          patients={meta?.patients ?? []}
+          employeesAndDoctors={meta?.employeesAndDoctors ?? []}
         />
       );
     },
+    enableSorting: false,
   },
 ];
 
-// Exporta o tipo corrigido se necessário em outros lugares
-export type FinancialTransaction = Transaction;
+export type FinancialTransaction = Transaction; // Mantém a exportação do tipo

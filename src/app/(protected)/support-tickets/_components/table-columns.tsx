@@ -6,15 +6,16 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { Badge } from "@/components/ui/badge";
+// Importa o helper para cabeçalhos ordenáveis
+import { DataTableColumnHeader } from "@/components/ui/data-table";
 import { supportTicketsTable, usersTable } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-// Tipo para o dado da linha, incluindo o usuário
 export type SupportTicketWithUser = typeof supportTicketsTable.$inferSelect & {
   user: Pick<typeof usersTable.$inferSelect, "name" | "email"> | null;
 };
 
-// Helper para mapear status para label e cor
+// Helper para mapear status (sem alterações)
 const getStatusProps = (status: SupportTicketWithUser["status"]) => {
   switch (status) {
     case "pending":
@@ -40,25 +41,35 @@ const getStatusProps = (status: SupportTicketWithUser["status"]) => {
   }
 };
 
+// Definição das colunas com cabeçalhos ordenáveis
 export const columns: ColumnDef<SupportTicketWithUser>[] = [
   {
     accessorKey: "id",
-    header: "#",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="#" />,
+    cell: ({ row }) => row.original.id,
+    enableSorting: true,
   },
   {
     accessorKey: "subject",
-    header: "Assunto",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Assunto" />
+    ),
+    cell: ({ row }) => row.original.subject,
+    enableSorting: true,
   },
   {
     accessorKey: "description",
-    header: "Descrição",
+    header: "Descrição", // Geralmente não ordenável
     cell: ({ row }) => (
-      <p className="max-w-xs truncate">{row.original.description}</p> // Truncate description
+      <p className="max-w-xs truncate">{row.original.description}</p>
     ),
+    enableSorting: false,
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
     cell: ({ row }) => {
       const { label, color } = getStatusProps(row.original.status);
       return (
@@ -67,39 +78,50 @@ export const columns: ColumnDef<SupportTicketWithUser>[] = [
         </Badge>
       );
     },
+    enableSorting: true,
   },
   {
-    accessorKey: "user.name", // Acessa o nome do usuário aninhado
-    header: "Aberto por",
+    accessorKey: "user.name",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Aberto por" />
+    ),
     cell: ({ row }) =>
       row.original.user?.name ?? row.original.user?.email ?? "-",
+    enableSorting: true,
   },
   {
     accessorKey: "createdAt",
-    header: "Data Abertura",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Data Abertura" />
+    ),
     cell: ({ row }) =>
       format(new Date(row.original.createdAt), "dd/MM/yyyy HH:mm", {
         locale: ptBR,
       }),
+    enableSorting: true,
   },
   {
     accessorKey: "updatedAt",
-    header: "Última Atualização",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Última Atualização" />
+    ),
     cell: ({ row }) => {
-      // CORREÇÃO: Adicionada verificação de nulidade
       const updatedAt = row.original.updatedAt;
       return updatedAt
         ? format(new Date(updatedAt), "dd/MM/yyyy HH:mm", {
             locale: ptBR,
           })
-        : "-"; // Ou algum valor padrão se for null
+        : "-";
     },
+    enableSorting: true,
   },
   // { // Coluna de Ações (pode ser adicionada futuramente)
   //   id: "actions",
+  //   header: "Ações",
   //   cell: ({ row }) => {
   //     // Aqui você pode adicionar botões para ver detalhes, mudar status, etc.
   //     return <div>...</div>;
   //   },
+  //   enableSorting: false,
   // },
 ];

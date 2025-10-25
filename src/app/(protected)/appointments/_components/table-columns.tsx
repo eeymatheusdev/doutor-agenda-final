@@ -1,9 +1,12 @@
+// src/app/(protected)/appointments/_components/table-columns.tsx
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+// Importa o helper para cabeçalhos ordenáveis
+import { DataTableColumnHeader } from "@/components/ui/data-table";
 import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
 
 import AppointmentsTableActions from "./table-actions";
@@ -19,31 +22,34 @@ export type AppointmentWithRelations = typeof appointmentsTable.$inferSelect & {
   doctor: {
     id: string;
     name: string;
-    specialty: string;
+    specialty: string; // Mantido, mesmo que venha de specialties[0]
   };
 };
 
 export const appointmentsTableColumns: ColumnDef<AppointmentWithRelations>[] = [
   {
-    id: "patient",
     accessorKey: "patient.name",
-    header: "Paciente",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Paciente" />
+    ),
+    cell: ({ row }) => row.original.patient.name, // Exibe o nome diretamente
+    enableSorting: true, // Habilita ordenação para esta coluna
   },
   {
-    id: "doctor",
     accessorKey: "doctor.name",
-    header: "Médico",
-    cell: (params) => {
-      const appointment = params.row.original;
-      return `${appointment.doctor.name}`;
-    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Médico" />
+    ),
+    cell: ({ row }) => row.original.doctor.name, // Exibe o nome diretamente
+    enableSorting: true, // Habilita ordenação para esta coluna
   },
   {
-    id: "appointmentDateTime",
     accessorKey: "appointmentDateTime",
-    header: "Data e Hora",
-    cell: (params) => {
-      const appointment = params.row.original;
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Data e Hora" />
+    ),
+    cell: ({ row }) => {
+      const appointment = row.original;
       return format(
         new Date(appointment.appointmentDateTime),
         "dd/MM/yyyy 'às' HH:mm",
@@ -52,26 +58,34 @@ export const appointmentsTableColumns: ColumnDef<AppointmentWithRelations>[] = [
         },
       );
     },
+    enableSorting: true, // Habilita ordenação para esta coluna
   },
   {
-    id: "procedure",
     accessorKey: "procedure",
-    header: "Procedimento",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Procedimento" />
+    ),
+    cell: ({ row }) => row.original.procedure, // Exibe o procedimento diretamente
+    enableSorting: true, // Habilita ordenação para esta coluna
   },
   {
-    id: "status",
     accessorKey: "status",
-    header: "Status",
-    cell: (params) => {
-      const status = params.row.original.status;
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
+    cell: ({ row }) => {
+      const status = row.original.status;
+      // Capitaliza a primeira letra e remove underscores
       return status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
     },
+    enableSorting: true, // Habilita ordenação para esta coluna
   },
   {
     id: "actions",
-    cell: (params) => {
-      const appointment = params.row.original;
-      // Esta parte será sobrescrita na `page.tsx` para passar os props necessários
+    header: "Ações", // Adiciona um header para a coluna de ações
+    cell: ({ row }) => {
+      const appointment = row.original;
+      // Esta parte será sobrescrita na `appointments-data-table.tsx`
       return (
         <AppointmentsTableActions
           appointment={appointment}
@@ -80,5 +94,6 @@ export const appointmentsTableColumns: ColumnDef<AppointmentWithRelations>[] = [
         />
       );
     },
+    enableSorting: false, // Desabilita ordenação para a coluna de ações
   },
 ];
