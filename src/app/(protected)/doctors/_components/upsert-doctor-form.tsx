@@ -1,3 +1,4 @@
+// src/app/(protected)/doctors/_components/upsert-doctor-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +14,6 @@ import { PatternFormat } from "react-number-format";
 import { toast } from "sonner";
 import { z } from "zod";
 
-// Não precisa do plugin UTC para esta correção específica
 import { upsertDoctor } from "@/actions/upsert-doctor";
 import {
   UpsertDoctorSchema,
@@ -117,8 +117,6 @@ const UpsertDoctorForm = ({
 }: UpsertDoctorFormProps) => {
   const initialDateOfBirth = parseDate(doctor?.dateOfBirth) ?? new Date();
 
-  // *** CORREÇÃO APLICADA AQUI ***
-  // Cast the result of map(String) and the default array to the specific enum type
   const initialAvailableWeekDays = (doctor?.availableWeekDays?.map(String) ?? [
     "1",
     "2",
@@ -126,24 +124,26 @@ const UpsertDoctorForm = ({
     "4",
     "5",
   ]) as WeekDayEnumValue[];
-  // *** FIM DA CORREÇÃO ***
 
+  // Define os valores padrão, incluindo os horários
   const defaultValues: UpsertDoctorSchema = {
     avatarImageUrl: doctor?.avatarImageUrl ?? "",
     name: doctor?.name ?? "",
     cro: doctor?.cro ?? "",
     rg: doctor?.rg ?? "",
     cpf: doctor?.cpf ?? "",
-    dateOfBirth: initialDateOfBirth, // Use the corrected initial value
+    dateOfBirth: initialDateOfBirth,
     email: doctor?.email ?? "",
     phone: doctor?.phone ?? "",
     whatsApp: doctor?.whatsApp ?? "",
     specialties: (doctor?.specialties as any) ?? [],
     observations: doctor?.observations ?? "",
     education: doctor?.education ?? "",
-    availableWeekDays: initialAvailableWeekDays, // Use the corrected initial value
-    availableFromTime: doctor?.availableFromTime ?? "",
-    availableToTime: doctor?.availableToTime ?? "",
+    availableWeekDays: initialAvailableWeekDays,
+    // *** CORREÇÃO: Adiciona horários padrão válidos ***
+    availableFromTime: doctor?.availableFromTime ?? "08:00:00",
+    availableToTime: doctor?.availableToTime ?? "18:00:00",
+    // *** FIM DA CORREÇÃO ***
     addressStreet: doctor?.addressStreet ?? "",
     addressNumber: doctor?.addressNumber ?? "",
     addressComplement: doctor?.addressComplement ?? "",
@@ -154,14 +154,12 @@ const UpsertDoctorForm = ({
   };
 
   const form = useForm<UpsertDoctorSchema>({
-    // Usa o tipo UpsertDoctorSchema
     shouldUnregister: true,
-    resolver: zodResolver(upsertDoctorSchema), // Usa o schema atualizado
-    // defaultValues needs to strictly match the expected type Date, not Date | undefined
+    resolver: zodResolver(upsertDoctorSchema),
     defaultValues: {
       ...defaultValues,
-      dateOfBirth: defaultValues.dateOfBirth, // Ensure it's Date
-      availableWeekDays: defaultValues.availableWeekDays, // Ensure correct type
+      dateOfBirth: defaultValues.dateOfBirth,
+      availableWeekDays: defaultValues.availableWeekDays,
     },
   });
 
@@ -170,9 +168,7 @@ const UpsertDoctorForm = ({
     if (isOpen) {
       form.reset({
         ...defaultValues,
-        // Allow undefined here for reset, handle required validation in Zod
         dateOfBirth: parseDate(doctor?.dateOfBirth),
-        // Cast here as well for the reset
         availableWeekDays: (doctor?.availableWeekDays?.map(String) ?? [
           "1",
           "2",
@@ -180,10 +176,14 @@ const UpsertDoctorForm = ({
           "4",
           "5",
         ]) as WeekDayEnumValue[],
+        // *** CORREÇÃO: Aplica os horários padrão no reset também ***
+        availableFromTime: doctor?.availableFromTime ?? "08:00:00",
+        availableToTime: doctor?.availableToTime ?? "18:00:00",
+        // *** FIM DA CORREÇÃO ***
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, form, doctor]);
+  }, [isOpen, form, doctor]); // Note: defaultValues não precisa estar aqui pois é recalculado
 
   const upsertDoctorAction = useAction(upsertDoctor, {
     onSuccess: () => {
@@ -196,7 +196,6 @@ const UpsertDoctorForm = ({
   });
 
   const onSubmit = (values: UpsertDoctorSchema) => {
-    // Usa o tipo UpsertDoctorSchema
     const nullableString = (value: string | null | undefined) =>
       value === "" ? null : value;
 
@@ -209,7 +208,6 @@ const UpsertDoctorForm = ({
       observations: nullableString(values.observations),
       education: nullableString(values.education),
       addressComplement: nullableString(values.addressComplement),
-      // availableWeekDays já está no formato correto (array de strings) vindo do form
     });
   };
 
@@ -245,10 +243,9 @@ const UpsertDoctorForm = ({
           onSubmit={form.handleSubmit(onSubmit)}
           className="max-h-[70vh] space-y-6 overflow-y-auto px-1 pr-4"
         >
-          {/* Informações Pessoais (mantém igual) */}
+          {/* Informações Pessoais */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Informações Pessoais</h3>
-            {/* Campos Name, Email, CRO, CPF, RG, DateOfBirth, WhatsApp, Phone */}
             <FormField
               control={form.control}
               name="name"
@@ -431,10 +428,9 @@ const UpsertDoctorForm = ({
           </div>
 
           <Separator />
-          {/* Endereço (mantém igual) */}
+          {/* Endereço */}
           <div className="space-y-4">
             <h3 className="font-semibold">Endereço</h3>
-            {/* Campos Street, Number, Neighborhood, Complement, City, State, Zipcode */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
@@ -562,17 +558,15 @@ const UpsertDoctorForm = ({
             <h3 className="text-lg font-semibold">
               Especialidades e Disponibilidade
             </h3>
-            {/* Especialidades (mantém igual) */}
+            {/* Especialidades */}
             <FormField
               control={form.control}
               name="specialties"
               render={() => (
-                // Removido 'field' pois usamos watch e setValue
                 <FormItem>
                   <FormLabel>Especialidades</FormLabel>
                   <Select
-                    onValueChange={handleSpecialtyChange} // Ação ao clicar em um item
-                    // O valor exibido no trigger não importa tanto aqui
+                    onValueChange={handleSpecialtyChange}
                     value={
                       selectedSpecialties.length > 0
                         ? selectedSpecialties[0]
@@ -597,7 +591,7 @@ const UpsertDoctorForm = ({
                               : "unchecked"
                           }
                           onSelect={(e) => {
-                            e.preventDefault(); // Previne o fechamento ao clicar
+                            e.preventDefault();
                             handleSpecialtyChange(specialty.value);
                           }}
                         >
@@ -606,7 +600,6 @@ const UpsertDoctorForm = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  {/* Exibe as especialidades selecionadas como botões */}
                   {selectedSpecialties.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-2">
                       {selectedSpecialties.map((specialty) => (
@@ -629,7 +622,7 @@ const UpsertDoctorForm = ({
               )}
             />
 
-            {/* Dias da Semana (Alterado para Checkboxes) */}
+            {/* Dias da Semana */}
             <FormField
               control={form.control}
               name="availableWeekDays"
@@ -659,11 +652,11 @@ const UpsertDoctorForm = ({
                                 <Checkbox
                                   checked={field.value?.includes(
                                     item.value as WeekDayEnumValue,
-                                  )} // Cast for type safety
+                                  )}
                                   onCheckedChange={(checked) => {
                                     const currentValues = field.value ?? [];
                                     const itemValue =
-                                      item.value as WeekDayEnumValue; // Cast for type safety
+                                      item.value as WeekDayEnumValue;
                                     return checked
                                       ? field.onChange([
                                           ...currentValues,
@@ -691,7 +684,7 @@ const UpsertDoctorForm = ({
               )}
             />
 
-            {/* Horários (mantém igual) */}
+            {/* Horários */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -702,6 +695,7 @@ const UpsertDoctorForm = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      value={field.value} // Controlled component
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
@@ -766,6 +760,7 @@ const UpsertDoctorForm = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      value={field.value} // Controlled component
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
@@ -825,10 +820,9 @@ const UpsertDoctorForm = ({
           </div>
 
           <Separator />
-          {/* Informações Adicionais (mantém igual) */}
+          {/* Informações Adicionais */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Informações Adicionais</h3>
-            {/* Campos Education, Observations, AvatarImageUrl */}
             <FormField
               control={form.control}
               name="education"
