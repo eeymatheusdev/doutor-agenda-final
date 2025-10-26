@@ -164,71 +164,277 @@ const UpsertPatientForm = ({
 
   // Definir se o componente está dentro de um Dialog para renderização condicional
   const isInDialog = isOpen !== undefined;
+
+  // *** CORREÇÃO APLICADA AQUI ***
+  // Seleciona o componente wrapper correto
   const FormWrapper = isInDialog ? DialogContent : React.Fragment;
   const formWrapperProps = isInDialog ? { className: "sm:max-w-[700px]" } : {};
+  // *** FIM DA CORREÇÃO ***
 
-  return (
-    <FormWrapper {...formWrapperProps}>
-      {isInDialog && (
-        <DialogHeader>
-          <DialogTitle>
-            {patient ? patient.name : "Adicionar paciente"}
-          </DialogTitle>
-          <DialogDescription>
-            {patient
-              ? "Edite as informações desse paciente."
-              : "Adicione um novo paciente."}
-          </DialogDescription>
-        </DialogHeader>
-      )}
-      <Form {...form}>
-        {/* Adiciona div com overflow se estiver em Dialog */}
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className={cn(
-            "space-y-6",
-            isInDialog && "max-h-[70vh] overflow-y-auto px-1 pr-4",
-            !isInDialog &&
-              "bg-card text-card-foreground rounded-lg border p-6 shadow-sm", // Estilo de Card se não estiver em Dialog
-          )}
-        >
-          {/* Status Cadastral (Visualização) */}
-          {patient && ( // Mostra apenas na edição
+  const FormContent = (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className={cn(
+          "space-y-6",
+          // Aplica padding e overflow apenas quando DENTRO de um Dialog
+          isInDialog && "max-h-[70vh] overflow-y-auto px-1 pr-4",
+          // Aplica estilo de Card quando NÃO ESTÁ em um Dialog
+          !isInDialog &&
+            "bg-card text-card-foreground rounded-lg border p-6 shadow-sm",
+        )}
+      >
+        {/* Renderiza Header apenas se estiver em Dialog */}
+        {isInDialog && (
+          <DialogHeader>
+            <DialogTitle>
+              {patient ? patient.name : "Adicionar paciente"}
+            </DialogTitle>
+            <DialogDescription>
+              {patient
+                ? "Edite as informações desse paciente."
+                : "Adicione um novo paciente."}
+            </DialogDescription>
+          </DialogHeader>
+        )}
+
+        {/* Status Cadastral (Visualização) */}
+        {patient && ( // Mostra apenas na edição
+          <FormField
+            control={form.control}
+            name="cadastralStatus"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status Cadastral</FormLabel>
+                <Select value={field.value} disabled>
+                  <FormControl>
+                    <SelectTrigger className="w-full cursor-not-allowed opacity-70 md:w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  O status é alterado na lista de pacientes.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {/* Dados Gerais */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Dados Gerais</h3>
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome Completo</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <FormField
               control={form.control}
-              name="cadastralStatus"
+              name="email"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status Cadastral</FormLabel>
-                  <Select value={field.value} disabled>
-                    <FormControl>
-                      <SelectTrigger className="w-full cursor-not-allowed opacity-70 md:w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="inactive">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    O status é alterado na lista de pacientes.
-                  </FormDescription>
+                <FormItem className="md:col-span-2">
+                  <FormLabel>E-mail (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="exemplo@email.com"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          )}
-
-          {/* Dados Gerais */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Dados Gerais</h3>
             <FormField
               control={form.control}
-              name="name"
+              name="phoneNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome Completo</FormLabel>
+                  <FormLabel>Telefone / WhatsApp</FormLabel>
+                  <FormControl>
+                    <PatternFormat
+                      format={
+                        field.value &&
+                        field.value.replace(/\D/g, "").length === 11
+                          ? "(##) #####-####"
+                          : "(##) ####-####"
+                      }
+                      mask="_"
+                      placeholder="(11) 99999-9999"
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value.value);
+                      }}
+                      customInput={Input}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <FormField
+              control={form.control}
+              name="dateOfBirth"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data de Nascimento</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !field.value && "text-muted-foreground",
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? (
+                            format(field.value, "dd/MM/yyyy", {
+                              locale: ptBR,
+                            })
+                          ) : (
+                            <span>Selecione</span>
+                          )}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        captionLayout="dropdown"
+                        fromYear={1930}
+                        toYear={new Date().getFullYear()}
+                        initialFocus
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sex"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sexo</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="male">Masculino</SelectItem>
+                      <SelectItem value="female">Feminino</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Documentos */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Documentos</h3>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="cpf"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CPF</FormLabel>
+                  <FormControl>
+                    <PatternFormat
+                      format="###.###.###-##"
+                      mask="_"
+                      placeholder="000.000.000-00"
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value.value);
+                      }}
+                      customInput={Input}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="rg"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>RG</FormLabel>
+                  <FormControl>
+                    {/* Usar Input normal para RG, pois formato varia */}
+                    <Input placeholder="00.000.000-0" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Endereço */}
+        <div className="space-y-4">
+          <h3 className="font-semibold">Endereço</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField
+              control={form.control}
+              name="zipCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CEP</FormLabel>
+                  <FormControl>
+                    <PatternFormat
+                      format="#####-###"
+                      mask="_"
+                      placeholder="00000-000"
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value.value);
+                      }}
+                      customInput={Input}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="street"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Rua/Avenida</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -236,302 +442,27 @@ const UpsertPatientForm = ({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>E-mail (Opcional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="exemplo@email.com"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phoneNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone / WhatsApp</FormLabel>
-                    <FormControl>
-                      <PatternFormat
-                        format={
-                          field.value &&
-                          field.value.replace(/\D/g, "").length === 11
-                            ? "(##) #####-####"
-                            : "(##) ####-####"
-                        }
-                        mask="_"
-                        placeholder="(11) 99999-9999"
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value.value);
-                        }}
-                        customInput={Input}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="dateOfBirth"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data de Nascimento</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? (
-                              format(field.value, "dd/MM/yyyy", {
-                                locale: ptBR,
-                              })
-                            ) : (
-                              <span>Selecione</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          // disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                          // *** CORRECTION HERE ***
-                          captionLayout="dropdown"
-                          fromYear={1930}
-                          toYear={new Date().getFullYear()}
-                          initialFocus
-                          locale={ptBR}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="sex"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sexo</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="male">Masculino</SelectItem>
-                        <SelectItem value="female">Feminino</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
           </div>
-
-          {/* Documentos */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Documentos</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="cpf"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>CPF</FormLabel>
-                    <FormControl>
-                      <PatternFormat
-                        format="###.###.###-##"
-                        mask="_"
-                        placeholder="000.000.000-00"
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value.value);
-                        }}
-                        customInput={Input}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="rg"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>RG</FormLabel>
-                    <FormControl>
-                      {/* Usar Input normal para RG, pois formato varia */}
-                      <Input placeholder="00.000.000-0" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Endereço */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Endereço</h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="zipCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>CEP</FormLabel>
-                    <FormControl>
-                      <PatternFormat
-                        format="#####-###"
-                        mask="_"
-                        placeholder="00000-000"
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value.value);
-                        }}
-                        customInput={Input}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="street"
-                render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
-                    <FormLabel>Rua/Avenida</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="complement"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Complemento (Opcional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="neighborhood"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bairro</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cidade</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estado</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {brazilianStates.map((state) => (
-                          <SelectItem key={state.value} value={state.value}>
-                            {state.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Dados do Responsável (Opcionais) */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Responsável (Opcional)</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <FormField
               control={form.control}
-              name="responsibleName"
+              name="number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome do responsável</FormLabel>
+                  <FormLabel>Número</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="complement"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Complemento (Opcional)</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ""} />
                   </FormControl>
@@ -539,113 +470,187 @@ const UpsertPatientForm = ({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="responsibleCpf"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>CPF do responsável</FormLabel>
-                    <FormControl>
-                      <PatternFormat
-                        format="###.###.###-##"
-                        mask="_"
-                        placeholder="000.000.000-00"
-                        value={field.value ?? ""}
-                        onValueChange={(value) => {
-                          field.onChange(value.value);
-                        }}
-                        customInput={Input}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="responsibleRg"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>RG do responsável</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="00.000.000-0"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="responsiblePhoneNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone do responsável</FormLabel>
-                    <FormControl>
-                      <PatternFormat
-                        format={
-                          field.value &&
-                          field.value.replace(/\D/g, "").length === 11
-                            ? "(##) #####-####"
-                            : "(##) ####-####"
-                        }
-                        mask="_"
-                        placeholder="(11) 99999-9999"
-                        value={field.value ?? ""}
-                        onValueChange={(value) => {
-                          field.onChange(value.value);
-                        }}
-                        customInput={Input}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="neighborhood"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bairro</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cidade</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Estado</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {brazilianStates.map((state) => (
+                        <SelectItem key={state.value} value={state.value}>
+                          {state.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
 
-          {/* Renderiza DialogFooter apenas se estiver em Dialog */}
-          {isInDialog ? (
-            <DialogFooter>
-              <Button
-                type="submit"
-                disabled={upsertPatientAction.isPending}
-                className="w-full sm:w-auto" // Ajuste responsivo
-              >
-                {upsertPatientAction.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  "Salvar Alterações"
-                )}
-              </Button>
-            </DialogFooter>
-          ) : (
-            // Renderiza botão normal se não estiver em Dialog
-            <div className="flex justify-end pt-4">
-              <Button type="submit" disabled={upsertPatientAction.isPending}>
-                {upsertPatientAction.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  "Salvar Alterações"
-                )}
-              </Button>
-            </div>
-          )}
-        </form>
-      </Form>
-    </FormWrapper>
+        <Separator />
+
+        {/* Dados do Responsável (Opcionais) */}
+        <div className="space-y-4">
+          <h3 className="font-semibold">Responsável (Opcional)</h3>
+          <FormField
+            control={form.control}
+            name="responsibleName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome do responsável</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField
+              control={form.control}
+              name="responsibleCpf"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CPF do responsável</FormLabel>
+                  <FormControl>
+                    <PatternFormat
+                      format="###.###.###-##"
+                      mask="_"
+                      placeholder="000.000.000-00"
+                      value={field.value ?? ""}
+                      onValueChange={(value) => {
+                        field.onChange(value.value);
+                      }}
+                      customInput={Input}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="responsibleRg"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>RG do responsável</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="00.000.000-0"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="responsiblePhoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone do responsável</FormLabel>
+                  <FormControl>
+                    <PatternFormat
+                      format={
+                        field.value &&
+                        field.value.replace(/\D/g, "").length === 11
+                          ? "(##) #####-####"
+                          : "(##) ####-####"
+                      }
+                      mask="_"
+                      placeholder="(11) 99999-9999"
+                      value={field.value ?? ""}
+                      onValueChange={(value) => {
+                        field.onChange(value.value);
+                      }}
+                      customInput={Input}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Renderiza o Footer correto dependendo do contexto */}
+        {isInDialog ? (
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={upsertPatientAction.isPending}
+              className="w-full sm:w-auto"
+            >
+              {upsertPatientAction.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar Alterações"
+              )}
+            </Button>
+          </DialogFooter>
+        ) : (
+          <div className="flex justify-end pt-4">
+            <Button type="submit" disabled={upsertPatientAction.isPending}>
+              {upsertPatientAction.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar Alterações"
+              )}
+            </Button>
+          </div>
+        )}
+      </form>
+    </Form>
   );
+
+  // Renderiza o conteúdo dentro do Wrapper apropriado
+  return <FormWrapper {...formWrapperProps}>{FormContent}</FormWrapper>;
 };
 
 export default UpsertPatientForm;

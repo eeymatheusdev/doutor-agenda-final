@@ -7,14 +7,13 @@ import * as React from "react";
 
 import { getPatientById } from "@/actions/patients/get-by-id"; // Action to fetch data
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator"; // *** IMPORT ADDED HERE ***
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 
 // Import the form component
 import UpsertPatientForm from "../../_components/upsert-patient-form";
 
 export default function PatientInfoTab({ patientId }: { patientId: string }) {
-  const [isFormOpen, setIsFormOpen] = React.useState(true); // Always open in this context
-
   // Fetch patient data client-side using React Query and the server action
   const { data: patientResult, isLoading } = useQuery({
     queryKey: ["patient", patientId],
@@ -23,18 +22,38 @@ export default function PatientInfoTab({ patientId }: { patientId: string }) {
   });
 
   if (isLoading) {
+    // Show a more detailed skeleton resembling the form structure
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Dados Cadastrais</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <span className="ml-2">Carregando dados do paciente...</span>
+      <div className="space-y-6 rounded-lg border p-6 shadow-sm">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="space-y-2 md:col-span-2">
+            <Skeleton className="h-4 w-1/5" />
+            <Skeleton className="h-10 w-full" />
           </div>
-        </CardContent>
-      </Card>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+        <Separator /> {/* Now Separator is recognized */}
+        <div className="flex justify-end pt-4">
+          <Skeleton className="h-10 w-32" />
+        </div>
+      </div>
     );
   }
 
@@ -53,21 +72,7 @@ export default function PatientInfoTab({ patientId }: { patientId: string }) {
     );
   }
 
-  // Render the UpsertPatientForm directly
-  return (
-    // Wrap form in a Card for consistent styling if needed, or remove Card
-    // <Card>
-    //   <CardHeader>
-    //     <CardTitle>Dados Cadastrais</CardTitle>
-    //   </CardHeader>
-    //   <CardContent>
-    <UpsertPatientForm
-      patient={patientResult.data}
-      isOpen={isFormOpen} // Keep form always "open" within the tab
-      // Optional: Add an onSuccess handler if needed after saving within the tab
-      // onSuccess={() => console.log("Patient updated")}
-    />
-    //   </CardContent>
-    // </Card>
-  );
+  // Render the UpsertPatientForm directly, without Dialog wrappers
+  // Pass undefined for isOpen as it's not in a dialog context here
+  return <UpsertPatientForm patient={patientResult.data} isOpen={undefined} />;
 }
