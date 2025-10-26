@@ -10,12 +10,15 @@ import { AnamnesisSchema } from "@/actions/anamnesis/schema";
 import { upsertAnamnesis } from "@/actions/anamnesis/upsert-anamnesis";
 import AnamnesisCanvas from "@/app/(protected)/patients/_components/anamnesis/anamnesis-canvas";
 import { AnamnesisProvider } from "@/app/(protected)/patients/_components/anamnesis/anamnesis-context";
-import AnamnesisHistory from "@/app/(protected)/patients/_components/anamnesis/anamnesis-history";
+// Importar AnamnesisHistory separadamente se quiser um link/botão para ele
+// import AnamnesisHistory from "@/app/(protected)/patients/_components/anamnesis/anamnesis-history";
 
-// Componente Wrapper para conter a lógica do Provedor
-function AnamnesisView({ patientId }: { patientId: string }) {
+// Componente Wrapper AnamnesisView removido para simplificar
+
+export default function AnamnesisTab({ patientId }: { patientId: string }) {
   const queryClient = useQueryClient();
 
+  // Lógica de salvamento permanece aqui no componente da aba
   const upsertAction = useAction(upsertAnamnesis, {
     onSuccess: ({ input }) => {
       queryClient.invalidateQueries({
@@ -39,10 +42,10 @@ function AnamnesisView({ patientId }: { patientId: string }) {
       upsertAction.execute({
         ...data,
         id: currentRecordId,
-        patientId: data.patientId,
+        patientId: data.patientId, // Garante que patientId está presente
       } as any);
     },
-    [upsertAction],
+    [upsertAction], // patientId removido das dependências pois vem de `data`
   );
 
   const handleSaveNewVersion = React.useCallback(
@@ -50,31 +53,24 @@ function AnamnesisView({ patientId }: { patientId: string }) {
       upsertAction.execute({
         ...data,
         id: undefined, // Garante que é uma nova versão
-        patientId: data.patientId,
+        patientId: data.patientId, // Garante que patientId está presente
       } as any);
     },
-    [upsertAction],
+    [upsertAction], // patientId removido das dependências pois vem de `data`
   );
 
   return (
+    // Provider envolve diretamente o Canvas
     <AnamnesisProvider
       patientId={patientId}
       saveDraft={handleSaveDraft}
       saveNewVersion={handleSaveNewVersion}
       isSaving={upsertAction.isExecuting}
     >
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <AnamnesisCanvas />
-        </div>
-        <div className="xl:col-span-1">
-          <AnamnesisHistory />
-        </div>
-      </div>
+      {/* Renderiza apenas o Canvas diretamente */}
+      <AnamnesisCanvas />
+      {/* Poderia adicionar um botão/link para abrir o histórico em um modal ou outra seção, se necessário */}
+      {/* Ex: <Button onClick={() => openHistoryModal()}>Ver Histórico</Button> */}
     </AnamnesisProvider>
   );
-}
-
-export default function AnamnesisTab({ patientId }: { patientId: string }) {
-  return <AnamnesisView patientId={patientId} />;
 }

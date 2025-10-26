@@ -1,8 +1,10 @@
-// src/actions/upsert-patient/index.ts - Conteúdo inalterado
+// src/actions/upsert-patient/index.ts
 "use server";
 
 import dayjs from "dayjs";
+import { eq } from "drizzle-orm"; // Importar eq
 import { revalidatePath } from "next/cache";
+import { isRedirectError } from "next/dist/client/components/redirect-error"; // Import isRedirectError
 import { headers } from "next/headers";
 
 import { db } from "@/db";
@@ -25,24 +27,53 @@ export const upsertPatient = actionClient
       throw new Error("Clinic not found");
     }
 
-    const formattedDateOfBirth = parsedInput.dateOfBirth
-      ? dayjs(parsedInput.dateOfBirth).format("YYYY-MM-DD")
+    const { id, dateOfBirth, cadastralStatus, email, ...restData } =
+      parsedInput; // Separate email
+
+    const formattedDateOfBirth = dateOfBirth
+      ? dayjs(dateOfBirth).format("YYYY-MM-DD")
       : "";
 
-    await db
-      .insert(patientsTable)
-      .values({
-        ...parsedInput,
-        dateOfBirth: formattedDateOfBirth,
-        clinicId: session.user.clinic.id,
-      })
-      .onConflictDoUpdate({
-        target: [patientsTable.id],
-        set: {
-          ...parsedInput,
-          dateOfBirth: formattedDateOfBirth,
-        },
+    // Base data for insert/update (excluding email initially)
+    const baseData = {
+      ...restData,
+      dateOfBirth: formattedDateOfBirth,
+      clinicId: session.user.clinic.id,
+    };
+
+    if (id) {
+      // --- UPDATE ---
+      // Prepare data specifically for update
+      const dataToSet: Partial<typeof patientsTable.$inferInsert> = {
+        ...baseData,
+      };
+
+      // Only include email in the update if it's a non-empty string
+      if (email && typeof email === "string" && email.trim() !== "") {
+        dataToSet.email = email;
+      }
+      // Note: We don't update cadastralStatus here.
+
+      await db
+        .update(patientsTable)
+        .set(dataToSet) // Use the conditionally prepared data
+        .where(eq(patientsTable.id, id));
+    } else {
+      // --- INSERT ---
+      // Include email for insert (DB requires it, schema allows optional for update)
+      // Throw error if email is missing during creation, as DB requires it.
+      if (!email || typeof email !== "string" || email.trim() === "") {
+        throw new Error("Email é obrigatório para criar um novo paciente.");
+      }
+      await db.insert(patientsTable).values({
+        ...baseData,
+        email: email, // Email is required for insert
+        cadastralStatus: "active", // Default status on creation
       });
+    }
 
     revalidatePath("/patients");
+    if (id) {
+      revalidatePath(`/patients/${id}`);
+    }
   });

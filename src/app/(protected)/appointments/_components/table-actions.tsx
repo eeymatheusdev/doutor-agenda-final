@@ -9,8 +9,8 @@ import {
   TrashIcon,
   X,
 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "next/link"; // Mantenha o Link
+// import { useRouter } from "next/navigation"; // Removido
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -53,7 +53,7 @@ const AppointmentsTableActions = ({
   patients,
   doctors,
 }: AppointmentsTableActionsProps) => {
-  const router = useRouter();
+  // const router = useRouter(); // Removido
   const [upsertDialogIsOpen, setUpsertDialogIsOpen] = useState(false);
   const [formType, setFormType] = useState<"edit" | "finalize">("edit");
 
@@ -90,23 +90,27 @@ const AppointmentsTableActions = ({
           <DropdownMenuContent>
             <DropdownMenuLabel>{appointment.patient.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={() => router.push(`/patients/${appointment.patientId}`)}
-              className="gap-2"
-            >
-              <ClipboardList className="mr-2 h-4 w-4" />
-              Ficha do Paciente
+            {/* Link para a página de detalhes do paciente */}
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/patients/${appointment.patientId}`}
+                className="gap-2"
+              >
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Ficha do Paciente
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => openDialog("edit")}
               disabled={!isAgendada}
+              className="gap-2" // Adicionado gap
             >
               <Edit className="mr-2 h-4 w-4" />
               Editar Agendamento
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => openDialog("finalize")}
-              className="text-primary focus:text-primary"
+              className="text-primary focus:text-primary gap-2" // Adicionado gap
               disabled={!isAgendada}
             >
               <Check className="text-primary focus:text-primary mr-2 h-4 w-4" />
@@ -116,7 +120,7 @@ const AppointmentsTableActions = ({
               <AlertDialogTrigger asChild>
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
-                  className="text-red-500 hover:text-red-500 focus:text-red-500"
+                  className="gap-2 text-red-500 hover:text-red-500 focus:text-red-500" // Adicionado gap
                   disabled={!isAgendada}
                 >
                   <X className="mr-2 h-4 w-4 text-red-500" />

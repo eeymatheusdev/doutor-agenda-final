@@ -1,6 +1,8 @@
+// src/app/(protected)/patients/_components/odontogram/tooth.tsx
 "use client";
 
-import { motion, useMotionValue } from "framer-motion";
+// Importações mantidas
+import { motion } from "framer-motion";
 import {
   AlertTriangle,
   Bone,
@@ -14,6 +16,7 @@ import * as React from "react";
 import {
   ODONTOGRAM_STATUS_MAP,
   OdontogramStatus,
+  TOOTH_FACES, // Importar TOOTH_FACES
   ToothFace,
 } from "@/app/(protected)/patients/[patientId]/odontogram/_constants";
 import {
@@ -31,7 +34,7 @@ import { useOdontogram } from "./odontogram-context";
 
 interface ToothProps {
   toothNumber: ToothNumber;
-  marks: ToothFaceMarks;
+  marks: ToothFaceMarks; // This is the collection of marks for the whole tooth
   className?: string;
   isUpper: boolean;
 }
@@ -47,126 +50,99 @@ const STATUS_ICON_MAP: Record<OdontogramStatus, React.ElementType> = {
   saudavel: Check,
 };
 
-const TOOTH_SHAPE_CLASSES: Record<"anterior" | "posterior", string> = {
-  anterior:
-    "rounded-t-lg [clip-path:polygon(0%_0%,100%_0%,100%_90%,85%_100%,15%_100%,0%_90%)]",
-  posterior:
-    "rounded-t-lg [clip-path:polygon(0%_0%,100%_0%,100%_80%,80%_100%,20%_100%,0%_80%)]",
-};
+// --- Funções Helper ---
+const getFaceLabel = (value: ToothFace) =>
+  TOOTH_FACES.find((f) => f.value === value)?.label || value;
 
-const getFaceLabel = (value: ToothFace) => {
-  const faces = [
-    { label: "Oclusal/Incisal", value: "oclusal" },
-    { label: "Vestibular", value: "vestibular" },
-    { label: "Lingual", value: "lingual" },
-    { label: "Mesial", value: "mesial" },
-    { label: "Distal", value: "distal" },
-  ];
-  return (
-    faces.find((f) => f.value === value)?.label.split("/")[0] ||
-    value.charAt(0).toUpperCase() + value.slice(1)
-  );
-};
+const isPosterior = (toothNumber: ToothNumber) =>
+  ["8", "7", "6", "5", "4"].includes(toothNumber[1]);
 
+// --- Componente Face ---
 const ToothFaceComp: React.FC<{
   face: ToothFace;
-  mark?: ToothFaceMarks[ToothFace];
+  mark?: ToothFaceMarks[ToothFace]; // This is the specific mark for *this* face
   toothNumber: ToothNumber;
   isUpper: boolean;
 }> = ({ face, mark, toothNumber, isUpper }) => {
   const { selectTooth } = useOdontogram();
-  const Icon = mark ? STATUS_ICON_MAP[mark.status] : Check;
+  const Icon = mark ? STATUS_ICON_MAP[mark.status] : null; // Ícone apenas se houver marcação
 
-  const isPosterior = ["8", "7", "6", "5", "4"].includes(toothNumber[1]);
-  const isOcclusalOrIncisal = face === "oclusal" || face === "incisal";
+  const isFacePosterior = isPosterior(toothNumber);
+  const faceConfig = ODONTOGRAM_STATUS_MAP[mark?.status || "saudavel"];
+  const faceColor =
+    mark && mark.status !== "saudavel" ? faceConfig.color : "bg-transparent"; // Cor ou transparente
 
-  const baseClasses = "absolute cursor-pointer transition-colors duration-150";
-  const fillColor = mark?.color || "bg-transparent";
-  const defaultFill = mark ? fillColor : "bg-gray-100/50";
-  const hoverClass = mark ? "" : "hover:bg-gray-200/50";
+  // Classes base e de hover
+  const baseClasses =
+    "absolute cursor-pointer border border-gray-400/50 transition-colors duration-150";
+  const hoverClass = mark ? "" : "hover:bg-primary/10"; // Hover sutil apenas se saudável
 
   let faceClasses = "";
-  let iconCenter = false;
-  let hasBorder = true;
+  const iconPositionClasses =
+    "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
+  const showIcon =
+    mark && mark.status !== "saudavel" && mark.status !== "ausente"; // Não mostra ícone para saudável ou ausente
 
+  // Definição das áreas das faces (simplificado, usar SVG seria mais preciso)
   switch (face) {
     case "oclusal":
-      if (!isPosterior) return null;
+    case "incisal": // Tratar ambos juntos
+      if (!isFacePosterior && face === "oclusal") return null; // Oclusal só para posteriores
+      if (isFacePosterior && face === "incisal") return null; // Incisal só para anteriores
       faceClasses =
-        "w-4/5 h-1/5 top-0 left-1/2 -translate-x-1/2 rounded-full z-30";
-      iconCenter = true;
-      hasBorder = false;
-      break;
-    case "incisal":
-      if (isPosterior) return null;
-      faceClasses =
-        "w-4/5 h-1/5 bottom-0 left-1/2 -translate-x-1/2 rounded-full z-30";
-      iconCenter = true;
-      hasBorder = false;
-      break;
-    case "mesial":
-      faceClasses =
-        "w-1/4 h-3/5 top-1/5 left-0 rounded-l-md [clip-path:polygon(0%_0%,100%_20%,100%_80%,0%_100%)] z-20";
-      break;
-    case "distal":
-      faceClasses =
-        "w-1/4 h-3/5 top-1/5 right-0 rounded-r-md [clip-path:polygon(0%_20%,100%_0%,100%_100%,0%_80%)] z-20";
+        "w-[60%] h-[60%] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-sm z-20"; // Centro
       break;
     case "vestibular":
+      faceClasses = "w-full h-[20%] top-0 left-0 rounded-t-sm z-10"; // Topo
+      break;
     case "lingual":
-      faceClasses =
-        "w-3/5 h-4/5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-t-full rounded-b-xl z-10";
-      iconCenter = true;
-      hasBorder = false;
-      if (face === "lingual") {
-        faceClasses = cn(faceClasses, "opacity-0 z-50");
-      } else {
-        faceClasses = cn(faceClasses, "border-2 border-gray-300");
-      }
+      faceClasses = "w-full h-[20%] bottom-0 left-0 rounded-b-sm z-10"; // Base
+      break;
+    case "mesial":
+      faceClasses = "w-[20%] h-full top-0 left-0 rounded-l-sm z-10"; // Esquerda
+      break;
+    case "distal":
+      faceClasses = "w-[20%] h-full top-0 right-0 rounded-r-sm z-10"; // Direita
       break;
   }
+
+  // Ajusta cor do ícone
+  let iconColorClass = "text-white"; // Default para fundos coloridos
+  if (mark?.status === "restauracao") iconColorClass = "text-blue-700";
+  if (mark?.status === "canal") iconColorClass = "text-yellow-700";
+
+  // Mostrar número do dente na face central se não houver marcação nela
+  const centralFace = isFacePosterior ? "oclusal" : "incisal";
+  // *** CORRECTION HERE: Use 'mark' which is defined in this scope ***
+  const showToothNumberOnFace = face === centralFace && !mark; // Check if the *current face's* mark is missing
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={cn(
-            baseClasses,
-            faceClasses,
-            defaultFill,
-            hoverClass,
-            hasBorder && "border-gray-300/50 hover:border-black/50",
-          )}
+          className={cn(baseClasses, faceClasses, faceColor, hoverClass)}
           onClick={() => selectTooth(toothNumber, face)}
+          aria-label={`Dente ${toothNumber}, Face ${getFaceLabel(face)}`}
         >
-          {iconCenter && mark && mark.status !== "saudavel" && (
+          {showIcon && Icon && (
             <Icon
-              className={cn(
-                "absolute top-1/2 left-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2",
-                mark.status === "carie" && "text-red-700",
-                mark.status === "restauracao" && "text-blue-700",
-                mark.status === "implante" && "text-green-700",
-              )}
+              className={cn("h-3 w-3", iconPositionClasses, iconColorClass)}
             />
           )}
-          {face === "vestibular" && (
+          {showToothNumberOnFace && (
             <span
               className={cn(
-                "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[0.6rem] font-bold text-gray-700",
-                mark && mark.status !== "saudavel"
-                  ? "opacity-0"
-                  : "opacity-100",
+                "pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[0.6rem] font-bold text-gray-600",
               )}
             >
-              V
+              {toothNumber}
             </span>
           )}
         </div>
       </TooltipTrigger>
       <TooltipContent>
         <p>
-          Dente: {toothNumber} | Face: {getFaceLabel(face)} (
-          {ODONTOGRAM_STATUS_MAP[mark?.status || "saudavel"].label})
+          Dente: {toothNumber} | Face: {getFaceLabel(face)} ({faceConfig.label})
         </p>
         {mark?.observation && (
           <p className="mt-1 text-xs">{mark.observation}</p>
@@ -176,75 +152,56 @@ const ToothFaceComp: React.FC<{
   );
 };
 
+// --- Componente Dente ---
 export const Tooth: React.FC<ToothProps> = ({
   toothNumber,
-  marks,
+  marks, // Pass the whole marks object for the tooth here
   className,
   isUpper,
 }) => {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotation = useMotionValue(0);
-
-  const isMissing =
-    (marks?.oclusal?.status === "ausente" &&
-      marks?.oclusal?.status === "ausente") ||
-    (marks?.incisal?.status === "ausente" &&
-      marks?.incisal?.status === "ausente");
-
-  const isPosterior = ["8", "7", "6", "5", "4"].includes(toothNumber[1]);
+  const isToothMissing = Object.values(marks).some(
+    (mark) => mark?.status === "ausente",
+  );
 
   const facesToRender: ToothFace[] = [
-    isPosterior ? "oclusal" : "incisal",
+    "oclusal",
+    "incisal",
     "vestibular",
     "lingual",
     "mesial",
     "distal",
   ];
 
-  const toothShapeClass = isPosterior
-    ? TOOTH_SHAPE_CLASSES.posterior
-    : TOOTH_SHAPE_CLASSES.anterior;
-
   return (
-    <motion.div
-      drag
-      dragConstraints={{ left: -10, right: 10, top: -10, bottom: 10 }}
-      style={{ x, y, rotate: rotation, cursor: "grab" }}
+    <div
       className={cn(
-        "relative flex size-12 items-center justify-center border-gray-400/50 bg-gray-200/50 shadow-lg",
-        toothShapeClass,
-        isMissing && "border-dashed opacity-30",
+        "relative flex size-10 items-center justify-center rounded-sm border border-gray-300 bg-white shadow-sm", // Estilo base do dente
+        isToothMissing && "opacity-30", // Estilo para dente ausente
         className,
       )}
+      aria-label={`Dente ${toothNumber}`}
     >
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 flex items-center justify-center",
-          isMissing ? "top-1/4" : "bottom-1/4",
-        )}
-      >
-        <span className="text-xs font-bold text-gray-700">{toothNumber}</span>
-      </div>
+      {/* Container interno para aplicar rotação às faces se necessário */}
       <div
         className={cn(
           "relative h-full w-full",
-          isUpper ? "rotate-180" : "rotate-0",
+          isUpper && "rotate-180 transform",
         )}
       >
         {facesToRender.map((face) => (
           <ToothFaceComp
             key={face}
-            face={face as ToothFace}
-            mark={marks[face]}
+            face={face}
+            mark={marks[face]} // Pass the specific mark for this face
             toothNumber={toothNumber}
             isUpper={isUpper}
           />
         ))}
       </div>
-      {isMissing && (
-        <X className="absolute z-50 h-8 w-8 text-gray-500" strokeWidth={3} />
+      {/* Ícone X sobreposto para dente ausente */}
+      {isToothMissing && (
+        <X className="absolute z-30 h-6 w-6 text-red-500" strokeWidth={3} />
       )}
-    </motion.div>
+    </div>
   );
 };

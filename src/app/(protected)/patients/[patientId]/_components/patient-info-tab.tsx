@@ -1,18 +1,42 @@
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { CalendarDays, Mail, Phone, User } from "lucide-react";
+// src/app/(protected)/patients/[patientId]/_components/patient-info-tab.tsx
+"use client"; // Needs to be client component to use the form
 
-import { getPatientById } from "@/actions/patients/get-by-id";
-import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query"; // Use useQuery for client-side fetching
+import { Loader2 } from "lucide-react";
+import * as React from "react";
+
+import { getPatientById } from "@/actions/patients/get-by-id"; // Action to fetch data
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 
-export default async function PatientInfoTab({
-  patientId,
-}: {
-  patientId: string;
-}) {
-  const patientResult = await getPatientById({ patientId });
+// Import the form component
+import UpsertPatientForm from "../../_components/upsert-patient-form";
+
+export default function PatientInfoTab({ patientId }: { patientId: string }) {
+  const [isFormOpen, setIsFormOpen] = React.useState(true); // Always open in this context
+
+  // Fetch patient data client-side using React Query and the server action
+  const { data: patientResult, isLoading } = useQuery({
+    queryKey: ["patient", patientId],
+    queryFn: () => getPatientById({ patientId }),
+    enabled: !!patientId, // Only run query if patientId is available
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Dados Cadastrais</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Carregando dados do paciente...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!patientResult || !patientResult.data) {
     return (
@@ -21,93 +45,29 @@ export default async function PatientInfoTab({
           <CardTitle>Dados Cadastrais</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Paciente não encontrado ou erro ao carregar os dados.</p>
+          <p className="text-destructive">
+            Paciente não encontrado ou erro ao carregar os dados.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  const { data } = patientResult;
-
-  const formatPhoneNumber = (phone: string) => {
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 11) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(
-        7,
-      )}`;
-    }
-    return phone;
-  };
-
-  const formattedDateOfBirth = format(
-    new Date(data.dateOfBirth),
-    "dd/MM/yyyy",
-    { locale: ptBR },
-  );
-
+  // Render the UpsertPatientForm directly
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Dados Cadastrais</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <h3 className="font-semibold">Informações Pessoais</h3>
-            <Separator className="my-2" />
-            <div className="space-y-2">
-              <Badge variant="outline">
-                <Mail className="mr-2 h-4 w-4" />
-                {data.email}
-              </Badge>
-              <Badge variant="outline">
-                <Phone className="mr-2 h-4 w-4" />
-                {formatPhoneNumber(data.phoneNumber)}
-              </Badge>
-              <Badge variant="outline">
-                <CalendarDays className="mr-2 h-4 w-4" />
-                Nascimento: {formattedDateOfBirth}
-              </Badge>
-              <Badge variant="outline">
-                <User className="mr-2 h-4 w-4" />
-                {data.sex === "male" ? "Masculino" : "Feminino"}
-              </Badge>
-            </div>
-          </div>
-          <div>
-            <h3 className="font-semibold">Endereço</h3>
-            <Separator className="my-2" />
-            <address className="not-italic">
-              {data.street}, {data.number}
-              {data.complement && `, ${data.complement}`}
-              <br />
-              {data.neighborhood}, {data.city} - {data.state}
-              <br />
-              CEP: {data.zipCode}
-            </address>
-          </div>
-        </div>
-        {data.responsibleName && (
-          <div>
-            <h3 className="font-semibold">Responsável</h3>
-            <Separator className="my-2" />
-            <p>
-              <strong>Nome:</strong> {data.responsibleName}
-            </p>
-            {data.responsibleCpf && (
-              <p>
-                <strong>CPF:</strong> {data.responsibleCpf}
-              </p>
-            )}
-            {data.responsiblePhoneNumber && (
-              <p>
-                <strong>Telefone:</strong>{" "}
-                {formatPhoneNumber(data.responsiblePhoneNumber)}
-              </p>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    // Wrap form in a Card for consistent styling if needed, or remove Card
+    // <Card>
+    //   <CardHeader>
+    //     <CardTitle>Dados Cadastrais</CardTitle>
+    //   </CardHeader>
+    //   <CardContent>
+    <UpsertPatientForm
+      patient={patientResult.data}
+      isOpen={isFormOpen} // Keep form always "open" within the tab
+      // Optional: Add an onSuccess handler if needed after saving within the tab
+      // onSuccess={() => console.log("Patient updated")}
+    />
+    //   </CardContent>
+    // </Card>
   );
 }

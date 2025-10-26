@@ -83,6 +83,11 @@ export const patientFinancialTransactionTypeEnum = pgEnum(
   "patient_financial_transaction_type",
   ["charge", "payment"], // Kept for patient finances distinction
 );
+// --- NEW ENUM for Patient Cadastral Status ---
+export const patientCadastralStatusEnum = pgEnum("patient_cadastral_status", [
+  "active",
+  "inactive",
+]);
 // ... (other existing enums: toothFaceEnum, employeeRoleEnum, etc. remain unchanged)
 export const toothFaceEnum = pgEnum("tooth_face", [
   "vestibular",
@@ -366,6 +371,7 @@ export const employeesTable = pgTable("employees", {
     .$onUpdate(() => new Date()),
 });
 
+// --- patientsTable UPDATED ---
 export const patientsTable = pgTable("patients", {
   id: uuid("id").defaultRandom().primaryKey(),
   clinicId: uuid("clinic_id")
@@ -392,6 +398,11 @@ export const patientsTable = pgTable("patients", {
   financialStatus: patientFinancialStatusEnum("financial_status")
     .notNull()
     .default("adimplente"),
+  // --- NEW FIELD: Cadastral Status ---
+  cadastralStatus: patientCadastralStatusEnum("cadastral_status")
+    .notNull()
+    .default("active"),
+  // --- END NEW FIELD ---
   createdAt: timestamp("created_at")
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -406,30 +417,26 @@ export const clinicFinancesTable = pgTable("clinic_finances", {
   clinicId: uuid("clinic_id")
     .notNull()
     .references(() => clinicsTable.id, { onDelete: "cascade" }),
-  // New/Modified fields
   operation: clinicFinancialOperationEnum("operation").notNull(),
-  typeInput: clinicFinancialTypeInputEnum("type_input"), // Nullable if operation='output'
-  typeOutput: clinicFinancialTypeOutputEnum("type_output"), // Nullable if operation='input'
+  typeInput: clinicFinancialTypeInputEnum("type_input"),
+  typeOutput: clinicFinancialTypeOutputEnum("type_output"),
   description: text("description").notNull(),
-  amountInCents: integer("amount_in_cents").notNull(), // Changed from numeric to integer
-  paymentDate: timestamp("payment_date"), // Date of actual payment/receipt
-  dueDate: date("due_date"), // Due date for pending items
-  status: clinicFinancialStatusEnum("status").notNull().default("pending"), // Uses updated enum
-  paymentMethod: clinicPaymentMethodsEnum("payment_method"), // Added
-  observations: text("observations"), // Added
-  // Optional foreign keys
+  amountInCents: integer("amount_in_cents").notNull(),
+  paymentDate: timestamp("payment_date"),
+  dueDate: date("due_date"),
+  status: clinicFinancialStatusEnum("status").notNull().default("pending"),
+  paymentMethod: clinicPaymentMethodsEnum("payment_method"),
+  observations: text("observations"),
   patientId: uuid("patient_id").references(() => patientsTable.id, {
     onDelete: "set null",
-  }), // For patient-related income/credits
+  }),
   employeeId: uuid("employee_id").references(() => employeesTable.id, {
-    // Includes doctors
     onDelete: "set null",
-  }), // For employee/doctor payments
-  linkedPatientChargeIds: jsonb("linked_patient_charge_ids").$type<number[]>(), // Store IDs from patient_finances
+  }),
+  linkedPatientChargeIds: jsonb("linked_patient_charge_ids").$type<number[]>(),
   createdBy: text("created_by")
     .notNull()
-    .references(() => usersTable.id, { onDelete: "restrict" }), // Added
-  // Timestamps
+    .references(() => usersTable.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at")
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -447,17 +454,18 @@ export const patientFinancesTable = pgTable("patient_finances", {
   clinicId: uuid("clinic_id")
     .notNull()
     .references(() => clinicsTable.id, { onDelete: "cascade" }),
-  type: patientFinancialTransactionTypeEnum("type").notNull(), // 'charge' or 'payment'
+  type: patientFinancialTransactionTypeEnum("type").notNull(),
   amountInCents: integer("amount_in_cents").notNull(),
   description: text("description"),
-  method: text("method"), // Only relevant for 'payment' type
-  dueDate: date("due_date"), // Added: Due date for charges
-  status: patientChargeStatusEnum("status"), // Uses updated enum (pending, paid, overdue) - Nullable for payments
+  method: text("method"),
+  dueDate: date("due_date"),
+  status: patientChargeStatusEnum("status"),
   relatedClinicFinanceId: integer("related_clinic_finance_id").references(
-    // Added: Link to clinic_finances entry if paid via clinic transaction
     () => clinicFinancesTable.id,
     { onDelete: "set null" },
   ),
+  contractNote: text("contract_note"), // Added for contract/note text
+  signed: boolean("signed").default(false), // Added to track signature
   createdAt: timestamp("created_at")
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -484,9 +492,7 @@ export const doctorsTable = pgTable("doctors", {
   specialties: dentalSpecialtyEnum("specialties").array().notNull(),
   observations: text("observations"),
   education: text("education"),
-  // availableFromWeekDay: integer("available_from_week_day").notNull(), // REMOVIDO
-  // availableToWeekDay: integer("available_to_week_day").notNull(), // REMOVIDO
-  availableWeekDays: integer("available_week_days").array().notNull(), // ADICIONADO (array of 0-6)
+  availableWeekDays: integer("available_week_days").array().notNull(),
   availableFromTime: time("available_from_time").notNull(),
   availableToTime: time("available_to_time").notNull(),
   addressStreet: text("address_street").notNull(),
@@ -504,6 +510,7 @@ export const doctorsTable = pgTable("doctors", {
     .$onUpdate(() => new Date()),
 });
 
+// --- anamnesesTable MODIFIED --- (Relationship implies one-to-one, keeping versions for history)
 export const anamnesesTable = pgTable("anamneses", {
   id: uuid("id").defaultRandom().primaryKey(),
   patientId: uuid("patient_id")
@@ -515,7 +522,7 @@ export const anamnesesTable = pgTable("anamneses", {
   createdBy: text("created_by")
     .notNull()
     .references(() => usersTable.id, { onDelete: "restrict" }),
-  version: integer("version").notNull().default(1),
+  version: integer("version").notNull().default(1), // Version for history
   status: anamnesisStatusEnum("status").notNull().default("draft"),
   summary: text("summary"),
   data: jsonb("data").$type<Record<string, any>>().notNull(),
@@ -610,6 +617,85 @@ export const supportTicketsTable = pgTable("support_tickets", {
     .$onUpdate(() => new Date()),
 });
 
+// --- NEW TABLES for Patient Detail Tabs ---
+
+export const documentsTable = pgTable("documents", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  patientId: uuid("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  fileUrl: text("file_url"), // URL for uploaded file (e.g., S3)
+  linkUrl: text("link_url"), // URL for external link
+  observations: text("observations"),
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .$onUpdate(() => new Date()),
+});
+
+export const prescriptionsTable = pgTable("prescriptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  patientId: uuid("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  doctorId: uuid("doctor_id")
+    .notNull()
+    .references(() => doctorsTable.id, { onDelete: "restrict" }),
+  medication: text("medication").notNull(), // Nome do medicamento
+  dosage: text("dosage"), // Ex: "500mg"
+  frequency: text("frequency"), // Ex: "1 comprimido a cada 8 horas"
+  duration: text("duration"), // Ex: "por 7 dias"
+  instructions: text("instructions"), // Instruções adicionais
+  date: date("date")
+    .notNull()
+    .default(sql`CURRENT_DATE`),
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .$onUpdate(() => new Date()),
+});
+
+export const certificatesTable = pgTable("certificates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  patientId: uuid("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  doctorId: uuid("doctor_id")
+    .notNull()
+    .references(() => doctorsTable.id, { onDelete: "restrict" }),
+  purpose: text("purpose").notNull(), // Ex: "Comparecimento à consulta", "Afastamento"
+  startDate: date("start_date")
+    .notNull()
+    .default(sql`CURRENT_DATE`),
+  endDate: date("end_date"), // Opcional, para afastamentos
+  durationDays: integer("duration_days"), // Opcional, alternativo a endDate
+  cid: text("cid"), // Código CID (opcional)
+  observations: text("observations"),
+  date: date("date")
+    .notNull()
+    .default(sql`CURRENT_DATE`), // Data de emissão
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .$onUpdate(() => new Date()),
+});
+
 // --- RELATIONS ---
 
 export const usersTableRelations = relations(usersTable, ({ many }) => ({
@@ -644,6 +730,9 @@ export const clinicsTableRelations = relations(clinicsTable, ({ many }) => ({
   anamneses: many(anamnesesTable),
   patientFinances: many(patientFinancesTable),
   supportTickets: many(supportTicketsTable), // Adicionado
+  documents: many(documentsTable), // Adicionado
+  prescriptions: many(prescriptionsTable), // Adicionado
+  certificates: many(certificatesTable), // Adicionado
 }));
 
 export const clinicFinancesTableRelations = relations(
@@ -660,17 +749,16 @@ export const clinicFinancesTableRelations = relations(
     employee: one(employeesTable, {
       fields: [clinicFinancesTable.employeeId],
       references: [employeesTable.id],
-    }), // Includes doctors via employees table logic if needed or direct link if separated
+    }),
     creator: one(usersTable, {
       fields: [clinicFinancesTable.createdBy],
       references: [usersTable.id],
       relationName: "creator",
     }),
-    // Relation to patient finances (if a clinic payment pays off specific charges)
     paidPatientCharges: one(patientFinancesTable, {
       fields: [clinicFinancesTable.linkedPatientChargeIds],
       references: [patientFinancesTable.id],
-    }), // This relation might need adjustment based on how linkedPatientChargeIds is queried
+    }),
   }),
 );
 
@@ -699,7 +787,7 @@ export const employeesTableRelations = relations(
       fields: [employeesTable.clinicId],
       references: [clinicsTable.id],
     }),
-    clinicFinances: many(clinicFinancesTable), // Payments made to this employee
+    clinicFinances: many(clinicFinancesTable),
   }),
 );
 
@@ -712,13 +800,15 @@ export const patientsTableRelations = relations(
     }),
     appointments: many(appointmentsTable),
     odontograms: many(odontogramsTable),
-    anamneses: many(anamnesesTable),
-    finances: many(patientFinancesTable), // Patient's own financial history (charges/payments)
-    clinicFinances: many(clinicFinancesTable), // Clinic transactions related to this patient
+    anamneses: many(anamnesesTable), // Relação mantida, pode representar histórico
+    finances: many(patientFinancesTable),
+    clinicFinances: many(clinicFinancesTable),
+    documents: many(documentsTable), // Adicionado
+    prescriptions: many(prescriptionsTable), // Adicionado
+    certificates: many(certificatesTable), // Adicionado
   }),
 );
 
-// Other relations remain the same
 export const doctorsTableRelations = relations(
   doctorsTable,
   ({ many, one }) => ({
@@ -728,7 +818,8 @@ export const doctorsTableRelations = relations(
     }),
     appointments: many(appointmentsTable),
     odontograms: many(odontogramsTable),
-    // Doctors are now linked via employeesTable if they are paid through it
+    prescriptions: many(prescriptionsTable), // Adicionado
+    certificates: many(certificatesTable), // Adicionado
   }),
 );
 
@@ -794,7 +885,6 @@ export const appointmentsTableRelations = relations(
   }),
 );
 
-// NOVA RELAÇÃO para Chamados de Suporte
 export const supportTicketsTableRelations = relations(
   supportTicketsTable,
   ({ one }) => ({
@@ -803,9 +893,56 @@ export const supportTicketsTableRelations = relations(
       references: [clinicsTable.id],
     }),
     user: one(usersTable, {
-      // Relação com o usuário que abriu
       fields: [supportTicketsTable.userId],
       references: [usersTable.id],
+    }),
+  }),
+);
+
+// --- NEW RELATIONS ---
+export const documentsTableRelations = relations(documentsTable, ({ one }) => ({
+  patient: one(patientsTable, {
+    fields: [documentsTable.patientId],
+    references: [patientsTable.id],
+  }),
+  clinic: one(clinicsTable, {
+    fields: [documentsTable.clinicId],
+    references: [clinicsTable.id],
+  }),
+}));
+
+export const prescriptionsTableRelations = relations(
+  prescriptionsTable,
+  ({ one }) => ({
+    patient: one(patientsTable, {
+      fields: [prescriptionsTable.patientId],
+      references: [patientsTable.id],
+    }),
+    clinic: one(clinicsTable, {
+      fields: [prescriptionsTable.clinicId],
+      references: [clinicsTable.id],
+    }),
+    doctor: one(doctorsTable, {
+      fields: [prescriptionsTable.doctorId],
+      references: [doctorsTable.id],
+    }),
+  }),
+);
+
+export const certificatesTableRelations = relations(
+  certificatesTable,
+  ({ one }) => ({
+    patient: one(patientsTable, {
+      fields: [certificatesTable.patientId],
+      references: [patientsTable.id],
+    }),
+    clinic: one(clinicsTable, {
+      fields: [certificatesTable.clinicId],
+      references: [clinicsTable.id],
+    }),
+    doctor: one(doctorsTable, {
+      fields: [certificatesTable.doctorId],
+      references: [doctorsTable.id],
     }),
   }),
 );

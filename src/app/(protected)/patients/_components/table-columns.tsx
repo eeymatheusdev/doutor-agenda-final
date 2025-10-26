@@ -5,9 +5,11 @@ import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { Badge } from "@/components/ui/badge"; // Import Badge
 // Importa o helper para cabeçalhos ordenáveis
 import { DataTableColumnHeader } from "@/components/ui/data-table";
 import { patientsTable } from "@/db/schema";
+import { cn } from "@/lib/utils"; // Import cn
 
 import PatientsTableActions from "./table-actions";
 
@@ -27,7 +29,7 @@ export const patientsTableColumns: ColumnDef<Patient>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Email" />
     ),
-    cell: ({ row }) => row.original.email,
+    cell: ({ row }) => row.original.email || "-", // Mostrar '-' se for nulo
     enableSorting: true,
   },
   {
@@ -37,14 +39,17 @@ export const patientsTableColumns: ColumnDef<Patient>[] = [
       const patient = row.original;
       const phoneNumber = patient.phoneNumber;
       if (!phoneNumber) return "-";
-      // Formata (XX) XXXXX-XXXX
+      // Formata (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
       const cleaned = phoneNumber.replace(/\D/g, "");
       if (cleaned.length === 11) {
         return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
       }
-      return phoneNumber; // Retorna original se não for formato esperado
+      if (cleaned.length === 10) {
+        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+      }
+      return phoneNumber;
     },
-    enableSorting: false, // Geralmente não se ordena por telefone formatado
+    enableSorting: false,
   },
   {
     accessorKey: "cpf",
@@ -58,49 +63,55 @@ export const patientsTableColumns: ColumnDef<Patient>[] = [
       if (cleaned.length === 11) {
         return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9)}`;
       }
-      return cpf; // Retorna original se não for formato esperado
+      return cpf;
     },
-    enableSorting: false, // Ordenar por CPF pode não ser usual
+    enableSorting: false,
   },
   {
-    accessorKey: "dateOfBirth",
+    accessorKey: "cadastralStatus", // Renomeado para cadastralStatus
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Nascimento" />
+      <DataTableColumnHeader column={column} title="Status Cadastro" /> // Título alterado
     ),
     cell: ({ row }) => {
-      const patient = row.original;
-      try {
-        // O Drizzle retorna date como string
-        return format(new Date(patient.dateOfBirth), "dd/MM/yyyy", {
-          locale: ptBR,
-        });
-      } catch (e) {
-        return "-"; // Retorna "-" se a data for inválida
-      }
+      const status = row.original.cadastralStatus;
+      const isActive = status === "active";
+      return (
+        <Badge
+          variant={isActive ? "default" : "secondary"}
+          className={cn(isActive && "bg-green-500 hover:bg-green-600")}
+        >
+          {isActive ? "Ativo" : "Inativo"}
+        </Badge>
+      );
     },
     enableSorting: true,
-  },
-  {
-    accessorKey: "sex",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Sexo" />
-    ),
-    cell: ({ row }) => {
-      const patient = row.original;
-      return patient.sex === "male" ? "Masculino" : "Feminino";
+    filterFn: (row, id, value) => {
+      // Adicionado filtro básico
+      return value.includes(row.getValue(id));
     },
-    enableSorting: true,
   },
   {
-    accessorKey: "financialStatus", // Adiciona coluna para Status Financeiro
+    accessorKey: "financialStatus",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Status Financeiro" />
     ),
     cell: ({ row }) => {
       const status = row.original.financialStatus;
-      return status === "inadimplente" ? "Inadimplente" : "Adimplente";
+      const isAdimplente = status === "adimplente";
+      return (
+        <Badge
+          variant={isAdimplente ? "default" : "destructive"}
+          className={cn(isAdimplente && "bg-green-500 hover:bg-green-600")}
+        >
+          {isAdimplente ? "Adimplente" : "Inadimplente"}
+        </Badge>
+      );
     },
     enableSorting: true,
+    filterFn: (row, id, value) => {
+      // Adicionado filtro básico
+      return value.includes(row.getValue(id));
+    },
   },
   {
     id: "actions",

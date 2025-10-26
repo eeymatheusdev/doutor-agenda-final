@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+// Separator removido
 import { cn } from "@/lib/utils";
 
 import {
@@ -39,16 +39,20 @@ const QUADRANT_IS_UPPER: Record<QuadrantKeys, boolean> = {
   quadrant4: false,
 };
 
+// --- Componente Quadrant ---
 function Quadrant({
   quadrant,
   isUpper,
+  className, // Adicionado className
 }: {
   quadrant: ToothNumber[];
   isUpper: boolean;
+  className?: string; // Adicionado className
 }) {
   const { visualOdontogram } = useOdontogram();
   return (
-    <div className={"flex min-w-[280px] gap-1"}>
+    // Ajustado para gap menor e alinhamento
+    <div className={cn("flex items-center justify-center gap-0.5", className)}>
       {quadrant.map((toothNumber) => (
         <Tooth
           key={toothNumber}
@@ -61,7 +65,7 @@ function Quadrant({
   );
 }
 
-// Renomeamos OdontogramCanvasBase para OdontogramCanvas e exportamos como padrão
+// --- Componente Principal ---
 export default function OdontogramCanvas() {
   const {
     saveNewOdontogramRecord,
@@ -79,11 +83,17 @@ export default function OdontogramCanvas() {
     isSaving || !hasDoctors || !currentDoctorId || !currentDate;
 
   return (
-    <Card className="w-full">
+    <Card className="w-full overflow-hidden">
+      {" "}
+      {/* Adicionado overflow-hidden */}
       <CardHeader>
         <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Arcada Dentária Permanente</CardTitle>
-          <Button onClick={saveNewOdontogramRecord} disabled={isDisabled}>
+          <Button
+            onClick={saveNewOdontogramRecord}
+            disabled={isDisabled}
+            size="sm"
+          >
             <Save className="mr-2 h-4 w-4" />
             {isSaving ? "Salvando..." : "Salvar Novo Registro"}
           </Button>
@@ -117,7 +127,7 @@ export default function OdontogramCanvas() {
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {currentDate ? (
-                  format(currentDate, "PPP", { locale: ptBR })
+                  format(currentDate, "dd/MM/yyyy", { locale: ptBR }) // Formato mais curto
                 ) : (
                   <span>Selecione a data</span>
                 )}
@@ -132,7 +142,7 @@ export default function OdontogramCanvas() {
                     setCurrentDate(date);
                   }
                 }}
-                toYear={new Date().getFullYear() + 1}
+                // toYear={new Date().getFullYear() + 1} // Remover limite futuro
                 initialFocus
                 locale={ptBR}
               />
@@ -141,27 +151,46 @@ export default function OdontogramCanvas() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col items-center gap-6 overflow-x-auto p-2">
-          <div className="flex justify-center gap-4">
-            <Quadrant
-              quadrant={PERMANENT_TEETH_FDI.quadrant1}
-              isUpper={QUADRANT_IS_UPPER.quadrant1}
-            />
-            <Quadrant
-              quadrant={PERMANENT_TEETH_FDI.quadrant2}
-              isUpper={QUADRANT_IS_UPPER.quadrant2}
-            />
-          </div>
-          <Separator className="w-full" />
-          <div className="flex justify-center gap-4">
-            <Quadrant
-              quadrant={PERMANENT_TEETH_FDI.quadrant4}
-              isUpper={QUADRANT_IS_UPPER.quadrant4}
-            />
-            <Quadrant
-              quadrant={PERMANENT_TEETH_FDI.quadrant3}
-              isUpper={QUADRANT_IS_UPPER.quadrant3}
-            />
+        {/* Container principal com overflow e padding */}
+        <div className="flex w-full justify-center overflow-x-auto p-4">
+          {/* Container para centralizar e adicionar espaço */}
+          <div className="inline-flex flex-col items-center gap-2">
+            {/* Arcada Superior */}
+            <div className="flex items-center gap-1">
+              {/* Quadrante 1 (Superior Direito no Desenho) */}
+              <Quadrant
+                quadrant={PERMANENT_TEETH_FDI.quadrant1}
+                isUpper={QUADRANT_IS_UPPER.quadrant1}
+                className="flex-row-reverse" // Inverte a ordem visual
+              />
+              {/* Linha Vertical Central (Opcional) */}
+              <div className="h-10 w-px bg-gray-300"></div>
+              {/* Quadrante 2 (Superior Esquerdo no Desenho) */}
+              <Quadrant
+                quadrant={PERMANENT_TEETH_FDI.quadrant2}
+                isUpper={QUADRANT_IS_UPPER.quadrant2}
+              />
+            </div>
+
+            {/* Linha Horizontal Central (Opcional) */}
+            {/* <div className="w-full h-px bg-gray-300 my-1"></div> */}
+
+            {/* Arcada Inferior */}
+            <div className="flex items-center gap-1">
+              {/* Quadrante 4 (Inferior Direito no Desenho) */}
+              <Quadrant
+                quadrant={PERMANENT_TEETH_FDI.quadrant4}
+                isUpper={QUADRANT_IS_UPPER.quadrant4}
+                className="flex-row-reverse" // Inverte a ordem visual
+              />
+              {/* Linha Vertical Central (Opcional) */}
+              <div className="h-10 w-px bg-gray-300"></div>
+              {/* Quadrante 3 (Inferior Esquerdo no Desenho) */}
+              <Quadrant
+                quadrant={PERMANENT_TEETH_FDI.quadrant3}
+                isUpper={QUADRANT_IS_UPPER.quadrant3}
+              />
+            </div>
           </div>
         </div>
       </CardContent>
