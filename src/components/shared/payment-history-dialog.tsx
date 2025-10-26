@@ -10,7 +10,7 @@ import { parseAsIsoDate, useQueryState } from "nuqs";
 import React from "react";
 import { DateRange } from "react-day-picker";
 
-import { getPaymentsByRecipient } from "@/actions/get-payments-by-recipient";
+import { getPaymentsByRecipient } from "@/actions/get-payments-by-recipient/get-payments-by-recipient";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { DataTable } from "@/components/ui/data-table";

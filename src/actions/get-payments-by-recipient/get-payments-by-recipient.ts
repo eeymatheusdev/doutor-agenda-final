@@ -1,29 +1,20 @@
 // src/actions/get-payments-by-recipient.ts
-"use server";
+"use server"; // <-- Ensure this is the first line
 
 import dayjs from "dayjs";
 import { and, desc, eq, gte, lte, SQL } from "drizzle-orm";
 import { headers } from "next/headers";
-import { z } from "zod";
 
 import { db } from "@/db";
 import { clinicFinancesTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { actionClient } from "@/lib/next-safe-action";
 
-export const getPaymentsByRecipientSchema = z.object({
-  recipientId: z.string().uuid(),
-  // recipientType: z.enum(["doctor", "employee"]), // Removido, employeeId cobre ambos
-  from: z.date().optional(),
-  to: z.date().optional(),
-});
-
-export type GetPaymentsByRecipientSchema = z.infer<
-  typeof getPaymentsByRecipientSchema
->;
+// Import the schema from the SAME directory
+import { getPaymentsByRecipientSchema } from "./schema"; // <-- Path relative to this file
 
 export const getPaymentsByRecipient = actionClient
-  .schema(getPaymentsByRecipientSchema)
+  .schema(getPaymentsByRecipientSchema) // Use the imported schema
   .action(async ({ parsedInput }) => {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user?.clinic?.id) {
