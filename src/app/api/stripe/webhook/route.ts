@@ -23,7 +23,7 @@ export const POST = async (request: Request) => {
 
   const text = await request.text();
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2025-05-28.basil", // Use a versão desejada
+    apiVersion: "2025-08-27.basil", // Use a versão desejada
   });
 
   let event: Stripe.Event;
